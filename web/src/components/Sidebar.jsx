@@ -3,30 +3,31 @@ import {
   ChevronUp,
   Code2,
   Database,
-  GitFork,
+  GitBranch,
   History,
   Home,
   MessageCircle,
   Plug,
   Settings
 } from 'lucide-react';
+import { navItems } from '../data/mockData.js';
 
-const navItems = [
-  { label: 'Overview', icon: Home, active: true },
-  { label: 'Weekly Stats', icon: BarChart3 },
-  { label: 'Top Repos', icon: Code2 },
-  { label: 'Sync History', icon: History },
-  { label: 'Chatbot', icon: MessageCircle },
-  { label: 'Integrations', icon: Plug },
-  { label: 'Settings', icon: Settings }
-];
+const icons = {
+  overview: Home,
+  weeklyStats: BarChart3,
+  topRepos: Code2,
+  syncHistory: History,
+  chatbot: MessageCircle,
+  integrations: Plug,
+  settings: Settings
+};
 
-function Sidebar() {
+function Sidebar({ activePage, onNavigate }) {
   return (
     <aside className="sidebar" aria-label="Primary navigation">
       <div className="brand-lockup">
         <div className="brand-mark">
-          <GitFork size={25} aria-hidden="true" />
+          <GitBranch size={27} aria-hidden="true" />
         </div>
         <div>
           <strong>Personal Data Pipeline</strong>
@@ -35,10 +36,15 @@ function Sidebar() {
 
       <nav className="sidebar-nav">
         {navItems.map((item) => {
-          const Icon = item.icon;
+          const Icon = icons[item.id] || Home;
 
           return (
-            <button className={`nav-item ${item.active ? 'active' : ''}`} key={item.label} type="button">
+            <button
+              className={`nav-item ${activePage === item.id ? 'active' : ''}`}
+              key={item.id}
+              type="button"
+              onClick={() => onNavigate(item.id)}
+            >
               <Icon size={18} aria-hidden="true" />
               <span>{item.label}</span>
             </button>
@@ -61,7 +67,7 @@ function Sidebar() {
         <div className="profile-card">
           <span className="avatar avatar-large">AM</span>
           <div>
-            <strong>Alex Mancera</strong>
+            <strong>Alex Johnson</strong>
             <p>alex.dev</p>
             <span>Pro Plan</span>
           </div>

@@ -1,12 +1,15 @@
-import { Bell, ChevronDown, Github, RefreshCcw } from 'lucide-react';
+import { Bell, ChevronDown, Github, Plus, RefreshCcw } from 'lucide-react';
 import { api } from '../api.js';
 
-function Topbar({ onSyncNow, syncing }) {
+function Topbar({ meta, onPrimaryAction, syncing }) {
+  const showAction = Boolean(meta.actionLabel);
+  const ActionIcon = meta.actionLabel === 'New Chat' ? Plus : RefreshCcw;
+
   return (
     <header className="topbar">
       <div className="page-title">
-        <h1>Overview</h1>
-        <p>Your GitHub activity pipeline at a glance.</p>
+        <h1>{meta.title}</h1>
+        <p>{meta.subtitle}</p>
       </div>
 
       <div className="topbar-actions">
@@ -16,10 +19,12 @@ function Topbar({ onSyncNow, syncing }) {
           <strong>Connected</strong>
           <span className="status-dot" />
         </button>
-        <button className="primary-button" type="button" onClick={onSyncNow} disabled={syncing}>
-          <RefreshCcw className={syncing ? 'spin' : ''} size={17} aria-hidden="true" />
-          Sync Now
-        </button>
+        {showAction ? (
+          <button className="primary-button" type="button" onClick={onPrimaryAction} disabled={syncing}>
+            <ActionIcon className={syncing && ActionIcon === RefreshCcw ? 'spin' : ''} size={17} aria-hidden="true" />
+            {meta.actionLabel}
+          </button>
+        ) : null}
         <button className="icon-button notification-button" type="button" aria-label="Notifications">
           <Bell size={20} aria-hidden="true" />
           <span />
