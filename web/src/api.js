@@ -1,26 +1,34 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 
 async function request(path, options = {}) {
   const { body, headers, ...restOptions } = options;
   const hasBody = body !== undefined && body !== null;
   const requestBody = hasBody && typeof body !== 'string' ? JSON.stringify(body) : body;
+  let response;
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...restOptions,
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-      ...(headers || {})
-    },
-    ...(hasBody ? { body: requestBody } : {})
-  });
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...restOptions,
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+        ...(headers || {})
+      },
+      ...(hasBody ? { body: requestBody } : {})
+    });
+  } catch {
+    const error = new Error('Backend offline. Start the API server and try again.');
+    error.status = 0;
+    error.code = 'BACKEND_OFFLINE';
+    throw error;
+  }
 
   const responseText = await response.text();
   const data = responseText ? parseJson(responseText) : null;
 
   if (!response.ok) {
-    const message = data?.message || data?.error || `Request failed with status ${response.status}`;
+    const message = getSafeErrorMessage(data, response.status);
     const error = new Error(message);
     error.status = response.status;
     error.data = data;
@@ -28,6 +36,14 @@ async function request(path, options = {}) {
   }
 
   return data;
+}
+
+function getSafeErrorMessage(data, status) {
+  if (status === 401) return data?.message || 'Please connect GitHub first.';
+  if (status === 503) return data?.message || 'A required service is not configured.';
+  if (status >= 500) return 'The backend hit an internal error. Please try again.';
+
+  return data?.message || data?.error || `Request failed with status ${status}`;
 }
 
 function parseJson(value) {

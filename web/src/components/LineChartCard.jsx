@@ -8,7 +8,8 @@ function LineChartCard({
   yTicks,
   showPointLabels = false,
   className = '',
-  compact = false
+  compact = false,
+  chartType = 'line'
 }) {
   const width = 900;
   const height = compact ? 250 : 310;
@@ -42,12 +43,16 @@ function LineChartCard({
 
         {controls.length ? (
           <div className="chart-controls">
-            {controls.map((control) => (
-              <button className="select-button" type="button" key={control}>
-                {control}
-                <ChevronDown size={15} aria-hidden="true" />
-              </button>
-            ))}
+            {controls.map((control, index) =>
+              typeof control === 'string' ? (
+                <button className="select-button" type="button" key={control}>
+                  {control}
+                  <ChevronDown size={15} aria-hidden="true" />
+                </button>
+              ) : (
+                <div key={control?.key || index}>{control}</div>
+              )
+            )}
           </div>
         ) : null}
       </div>
@@ -56,8 +61,8 @@ function LineChartCard({
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={title}>
           <defs>
             <linearGradient id={`${title.replace(/\s+/g, '')}Area`} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#5b3ff6" stopOpacity="0.24" />
-              <stop offset="100%" stopColor="#5b3ff6" stopOpacity="0.03" />
+              <stop offset="0%" stopColor="var(--chart-fill)" />
+              <stop offset="100%" stopColor="var(--chart-fill-end)" />
             </linearGradient>
           </defs>
           {ticks.map((tick) => {
@@ -72,18 +77,45 @@ function LineChartCard({
               </g>
             );
           })}
-          <path className="chart-area" d={areaPath} fill={`url("#${title.replace(/\s+/g, '')}Area")`} />
-          <path className="chart-line" d={linePath} />
-          {points.map((point) => (
-            <g key={`${point.label}-${point.value}`}>
-              {showPointLabels ? (
-                <text className="chart-point-label" x={point.x} y={point.y - 13} textAnchor="middle">
-                  {point.value}
-                </text>
-              ) : null}
-              <circle className="chart-point" cx={point.x} cy={point.y} r="5" />
-            </g>
-          ))}
+          {chartType === 'bar' ? (
+            points.map((point) => {
+              const barWidth = Math.max(16, chartWidth / Math.max(points.length, 1) - 18);
+              const barHeight = padding.top + chartHeight - point.y;
+
+              return (
+                <g key={`${point.label}-${point.value}`}>
+                  <rect
+                    className="chart-bar"
+                    x={point.x - barWidth / 2}
+                    y={point.y}
+                    width={barWidth}
+                    height={barHeight}
+                    rx="8"
+                  />
+                  {showPointLabels ? (
+                    <text className="chart-point-label" x={point.x} y={point.y - 13} textAnchor="middle">
+                      {point.value}
+                    </text>
+                  ) : null}
+                </g>
+              );
+            })
+          ) : (
+            <>
+              <path className="chart-area" d={areaPath} fill={`url("#${title.replace(/\s+/g, '')}Area")`} />
+              <path className="chart-line" d={linePath} />
+              {points.map((point) => (
+                <g key={`${point.label}-${point.value}`}>
+                  {showPointLabels ? (
+                    <text className="chart-point-label" x={point.x} y={point.y - 13} textAnchor="middle">
+                      {point.value}
+                    </text>
+                  ) : null}
+                  <circle className="chart-point" cx={point.x} cy={point.y} r="5" />
+                </g>
+              ))}
+            </>
+          )}
           {points
             .filter((_, index) => index % labelStep === 0 || index === points.length - 1)
             .map((point) => (

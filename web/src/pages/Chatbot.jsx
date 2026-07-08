@@ -1,24 +1,42 @@
 import { ArrowRight, Calendar, ChevronRight, Code2, Copy, Flame, Lightbulb, Send, Sparkles, Star, ThumbsDown, ThumbsUp, TrendingUp, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { askChatbot } from '../api.js';
+import EmptyState from '../components/EmptyState.jsx';
 import { suggestedPrompts } from '../data/mockData.js';
 
-const promptIcons = [TrendingUp, Code2, Flame, Users, Calendar, Star];
+const promptIcons = [TrendingUp, Code2, Flame, Users, Calendar, Star, Sparkles, Lightbulb];
+const extraPrompts = [
+  'What changed since my latest sync?',
+  'Summarize my most active repositories',
+  'Which repository should I focus on next?',
+  'Did any sync runs fail recently?'
+];
 const emptyRepositories = [];
 
-function Chatbot({ dashboardData }) {
+function Chatbot({ dashboardData, notify, chatResetNonce }) {
   const repositories = dashboardData?.topRepos?.repositories ?? emptyRepositories;
   const starterMessages = useMemo(() => buildStarterMessages(repositories), [repositories]);
   const [input, setInput] = useState('');
   const [asking, setAsking] = useState(false);
+  const [expandedPrompts, setExpandedPrompts] = useState(false);
+  const [feedback, setFeedback] = useState({});
   const [messages, setMessages] = useState(starterMessages);
+  const prompts = expandedPrompts ? [...suggestedPrompts, ...extraPrompts] : suggestedPrompts;
 
   useEffect(() => {
     setMessages((current) => {
       const customMessages = current.filter((message) => !message.starter);
-      return [...starterMessages, ...customMessages];
+      return customMessages.length ? [...starterMessages, ...customMessages] : starterMessages;
     });
   }, [starterMessages]);
+
+  useEffect(() => {
+    if (chatResetNonce) {
+      setMessages([]);
+      setInput('');
+      setFeedback({});
+    }
+  }, [chatResetNonce]);
 
   async function sendQuestion(question) {
     const cleanQuestion = question.trim();
@@ -54,24 +72,30 @@ function Chatbot({ dashboardData }) {
             ? {
                 ...message,
                 content: answer,
+                source: result?.source,
+                warning: result?.warning,
                 loading: false
               }
             : message
         )
       );
+      if (result?.source === 'supabase-fallback') {
+        notify?.('Ollama was unavailable, so the answer used synced Supabase data.', 'warning', 'AI fallback used');
+      }
     } catch (error) {
       setMessages((current) =>
         current.map((message) =>
           message.id === `ai-${requestId}`
             ? {
                 ...message,
-                content: 'I could not reach the local AI model, but here is an answer based on your synced GitHub data.',
+                content: error.message || 'Both AI and fallback response failed. Please check the backend.',
                 loading: false,
                 error: true
               }
             : message
         )
       );
+      notify?.(error.message || 'Both AI and fallback response failed.', 'error', 'Chatbot error');
     } finally {
       setAsking(false);
     }
@@ -80,6 +104,11 @@ function Chatbot({ dashboardData }) {
   function handleSubmit(event) {
     event.preventDefault();
     sendQuestion(input);
+  }
+
+  async function copyResponse(message) {
+    await navigator.clipboard.writeText(message.content);
+    notify?.('Copied AI response to clipboard.', 'success', 'Copied');
   }
 
   return (
@@ -96,7 +125,7 @@ function Chatbot({ dashboardData }) {
         </div>
 
         <div className="prompt-list">
-          {suggestedPrompts.map((prompt, index) => {
+          {prompts.map((prompt, index) => {
             const Icon = promptIcons[index] || Sparkles;
 
             return (
@@ -109,8 +138,8 @@ function Chatbot({ dashboardData }) {
           })}
         </div>
 
-        <button className="outline-button prompt-more" type="button">
-          View all examples
+        <button className="outline-button prompt-more" type="button" onClick={() => setExpandedPrompts((current) => !current)}>
+          {expandedPrompts ? 'Show fewer examples' : 'View all examples'}
           <ArrowRight size={15} aria-hidden="true" />
         </button>
       </aside>
@@ -121,56 +150,52 @@ function Chatbot({ dashboardData }) {
         </div>
 
         <div className="assistant-thread">
-          {messages.map((message) => (
-            <div className={`message-row ${message.role === 'user' ? 'user-message' : 'assistant-message'}`} key={message.id}>
-              {message.role === 'ai' ? <span className="ai-avatar">AI</span> : null}
-              <div className="message-stack">
-                <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
-                  <p>{message.content}</p>
-                  {message.list ? (
-                    <ul className="answer-list">
-                      {message.list.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {message.languages ? (
-                    <div className="language-breakdown">
-                      {message.languages.map((language) => (
-                        <div className="language-row" key={language.language}>
-                          <span className="language-key">
-                            <i style={{ backgroundColor: language.color }} />
-                            {language.language}
-                          </span>
-                          <span className="language-meter">
-                            <span style={{ width: `${language.percent}%` }} />
-                          </span>
-                          <em>
-                            {language.percent}% ({language.commits} commits)
-                          </em>
-                        </div>
-                      ))}
-                      <strong>Total commits: 575</strong>
+          {messages.length ? (
+            messages.map((message) => (
+              <div className={`message-row ${message.role === 'user' ? 'user-message' : 'assistant-message'}`} key={message.id}>
+                {message.role === 'ai' ? <span className="ai-avatar">AI</span> : null}
+                <div className="message-stack">
+                  <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
+                    <p>{message.content}</p>
+                    {message.list ? (
+                      <ul className="answer-list">
+                        {message.list.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {message.warning ? <em className="message-warning">{message.warning}</em> : null}
+                    <span>{message.time}</span>
+                  </div>
+                  {message.role === 'ai' ? (
+                    <div className="feedback-actions">
+                      <button type="button" aria-label="Copy response" onClick={() => copyResponse(message)}>
+                        <Copy size={16} aria-hidden="true" />
+                      </button>
+                      <button
+                        className={feedback[message.id] === 'up' ? 'active-feedback' : ''}
+                        type="button"
+                        aria-label="Like response"
+                        onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'up' ? '' : 'up' }))}
+                      >
+                        <ThumbsUp size={16} aria-hidden="true" />
+                      </button>
+                      <button
+                        className={feedback[message.id] === 'down' ? 'active-feedback' : ''}
+                        type="button"
+                        aria-label="Dislike response"
+                        onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'down' ? '' : 'down' }))}
+                      >
+                        <ThumbsDown size={16} aria-hidden="true" />
+                      </button>
                     </div>
                   ) : null}
-                  <span>{message.time}</span>
                 </div>
-                {message.role === 'ai' ? (
-                  <div className="feedback-actions">
-                    <button type="button" aria-label="Copy response">
-                      <Copy size={16} aria-hidden="true" />
-                    </button>
-                    <button type="button" aria-label="Like response">
-                      <ThumbsUp size={16} aria-hidden="true" />
-                    </button>
-                    <button type="button" aria-label="Dislike response">
-                      <ThumbsDown size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                ) : null}
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <EmptyState title="New chat ready" message="Choose a suggested prompt or ask a question about your synced GitHub data." />
+          )}
         </div>
 
         <form className="chat-form" onSubmit={handleSubmit}>
@@ -184,7 +209,7 @@ function Chatbot({ dashboardData }) {
             <Send size={18} aria-hidden="true" />
           </button>
         </form>
-        <p className="chat-disclaimer">Responses are generated by your configured AI provider and grounded in your data.</p>
+        <p className="chat-disclaimer">Responses use local Ollama when available and stay grounded in synced GitHub data.</p>
       </article>
     </section>
   );

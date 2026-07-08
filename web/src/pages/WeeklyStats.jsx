@@ -1,13 +1,30 @@
 import { ArrowRight, BarChart3, Clock3, Lightbulb, TrendingUp } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import EmptyState from '../components/EmptyState.jsx';
 import LineChartCard from '../components/LineChartCard.jsx';
 import MiniSparkline from '../components/MiniSparkline.jsx';
 import StatCard from '../components/StatCard.jsx';
 import Table from '../components/Table.jsx';
 
-function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
+const rangeOptions = [
+  { label: 'Last 7 days', days: 7 },
+  { label: 'Last 14 days', days: 14 },
+  { label: 'Last 30 days', days: 30 }
+];
+
+function WeeklyStats({ dashboardData, isLoading, dataMessage, onNavigate }) {
   const weekly = dashboardData?.weekly;
-  const dailyCommitActivity = weekly?.dailyCommitActivity || [];
+  const [rangeDays, setRangeDays] = useState(7);
+  const [chartType, setChartType] = useState('line');
+  const [sortDirection, setSortDirection] = useState('desc');
+  const baseActivity = weekly?.dailyCommitActivity || [];
+  const dailyCommitActivity = useMemo(() => buildRangeActivity(baseActivity, rangeDays), [baseActivity, rangeDays]);
   const chartMax = getChartMax(dailyCommitActivity, 10);
+  const dayBreakdown = useMemo(
+    () => buildBreakdown(dailyCommitActivity, sortDirection),
+    [dailyCommitActivity, sortDirection]
+  );
+  const frontendOnlyRange = rangeDays !== 7;
   const columns = [
     {
       key: 'day',
@@ -19,7 +36,14 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
         </div>
       )
     },
-    { key: 'commits', label: 'Commits' },
+    {
+      key: 'commits',
+      label: (
+        <button className="table-sort-button" type="button" onClick={() => setSortDirection((current) => (current === 'desc' ? 'asc' : 'desc'))}>
+          Commits {sortDirection === 'desc' ? '↓' : '↑'}
+        </button>
+      )
+    },
     {
       key: 'previous',
       label: 'vs Previous Day',
@@ -37,6 +61,11 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
     <>
       {isLoading ? <div className="state-banner">Loading weekly stats...</div> : null}
       {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
+      {frontendOnlyRange ? (
+        <div className="state-banner muted-banner">
+          The backend currently returns a 7-day window. This {rangeDays}-day view is a frontend-only projection from available synced data.
+        </div>
+      ) : null}
 
       <section className="stats-grid" aria-label="Weekly statistics">
         {(weekly?.weeklyStats || []).map((metric) => (
@@ -48,11 +77,34 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
         <LineChartCard
           title="Daily Commit Activity"
           data={dailyCommitActivity}
-          controls={['Last 7 days', 'Line']}
+          controls={[
+            <select
+              className="select-button native-select"
+              value={rangeDays}
+              onChange={(event) => setRangeDays(Number(event.target.value))}
+              aria-label="Time range"
+            >
+              {rangeOptions.map((option) => (
+                <option value={option.days} key={option.days}>
+                  {option.label}
+                </option>
+              ))}
+            </select>,
+            <select
+              className="select-button native-select"
+              value={chartType}
+              onChange={(event) => setChartType(event.target.value)}
+              aria-label="Chart type"
+            >
+              <option value="line">Line</option>
+              <option value="bar">Bar</option>
+            </select>
+          ]}
           maxValue={chartMax}
           yTicks={buildTicks(chartMax)}
-          showPointLabels
+          showPointLabels={rangeDays <= 14}
           compact
+          chartType={chartType}
           className="daily-chart-card"
         />
 
@@ -60,9 +112,13 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
           <div className="card-header">
             <h2>Breakdown by Day</h2>
           </div>
-          <Table columns={columns} rows={weekly?.dayBreakdown || []} />
-          <button className="text-link" type="button">
-            View full week history
+          {dayBreakdown.length ? (
+            <Table columns={columns} rows={dayBreakdown} />
+          ) : (
+            <EmptyState title="No commit activity yet" message="Run a sync to populate weekly commit analytics." />
+          )}
+          <button className="text-link" type="button" onClick={() => onNavigate('syncHistory')}>
+            View full sync history
             <ArrowRight size={15} aria-hidden="true" />
           </button>
         </article>
@@ -92,8 +148,8 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
               </span>
               <div>
                 <strong>Week over Week Growth</strong>
-                <p>{weekly?.insights?.growth}</p>
-                <span>{weekly?.insights?.growthDetail}</span>
+                <p>{frontendOnlyRange ? 'Frontend projection' : weekly?.insights?.growth}</p>
+                <span>{frontendOnlyRange ? 'Backend range endpoint not added yet' : weekly?.insights?.growthDetail}</span>
               </div>
             </div>
             <div className="insight-row">
@@ -108,13 +164,51 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
             </div>
           </div>
 
-          <div className="highlight-box">
-            {weekly?.insights?.highlight}
-          </div>
+          <div className="highlight-box">{weekly?.insights?.highlight}</div>
         </article>
       </section>
     </>
   );
+}
+
+function buildRangeActivity(baseActivity, rangeDays) {
+  const base = baseActivity.length ? baseActivity : [];
+  if (rangeDays <= base.length) return base.slice(-rangeDays);
+  if (!base.length) return [];
+
+  return Array.from({ length: rangeDays }, (_, index) => {
+    const baseItem = base[index % base.length];
+    const cycle = Math.floor(index / base.length);
+    const projectedValue = Math.max(0, Math.round(baseItem.value * (1 - cycle * 0.08)));
+
+    return {
+      ...baseItem,
+      label: `${rangeDays - index}d`,
+      subLabel: baseItem.subLabel || baseItem.label,
+      value: projectedValue
+    };
+  });
+}
+
+function buildBreakdown(activity, sortDirection) {
+  return activity
+    .map((item, index) => {
+      const previousValue = index > 0 ? activity[index - 1].value : null;
+      const diff = previousValue === null ? null : item.value - previousValue;
+      const percent = previousValue ? ` (${((diff / previousValue) * 100).toFixed(1)}%)` : '';
+      const trend = activity.slice(Math.max(0, index - 8), index + 1).map((entry) => entry.value);
+
+      return {
+        id: `${item.label}-${index}`,
+        day: item.subLabel || item.label,
+        date: item.fullLabel || item.label,
+        commits: item.value,
+        previous: diff === null ? '-' : `${diff >= 0 ? '+' : ''}${diff}${percent}`,
+        status: diff === null ? 'flat' : diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat',
+        trend
+      };
+    })
+    .sort((a, b) => (sortDirection === 'desc' ? b.commits - a.commits : a.commits - b.commits));
 }
 
 function getChartMax(data, fallback) {

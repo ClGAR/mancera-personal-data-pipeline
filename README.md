@@ -65,6 +65,44 @@ This project demonstrates:
 - Supabase fallback answers if AI is unavailable
 - Clean modern dashboard UI
 
+## Frontend Functionality
+
+The dashboard UI is wired to feel like a real app rather than a static mockup:
+
+- Working sidebar navigation with hash-based page state
+- Live Sync Now action that refreshes weekly stats, top repositories, and sync history
+- Searchable and filterable repository table
+- Real sync history filters for status and date ranges
+- Functional chatbot with local Ollama answers and Supabase fallback answers
+- Integration configuration modals with honest configured, not configured, local only, and coming soon states
+- Settings interactions with session/localStorage persistence where backend endpoints do not exist yet
+- Export data action that downloads a JSON snapshot of currently loaded user, stats, repository, and sync data
+- Toast notifications for sync, logout, copy, export, save, and backend-offline states
+- Polished loading, empty, and error states across the dashboard
+
+Current limitations are intentionally visible in the UI:
+
+- Settings persistence is local or localStorage only unless backend settings endpoints are added later.
+- Email and Slack notifications are coming soon.
+- GitHub disconnect has a confirmation modal, but the backend disconnect endpoint is not implemented yet.
+
+## Theme Support
+
+The frontend supports a production-style theme system:
+
+- Light mode
+- Dark mode
+- System preference mode
+- Theme preference saved locally in `localStorage`
+- System mode follows the browser or OS `prefers-color-scheme` setting
+- Implemented with CSS variables and a lightweight React theme context
+
+The saved localStorage key is:
+
+```text
+personal-data-pipeline-theme
+```
+
 ## Screenshots
 
 ### Overview Dashboard

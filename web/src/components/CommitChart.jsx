@@ -38,8 +38,8 @@ function CommitChart({ data }) {
         <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Commit counts over the last 12 weeks">
           <defs>
             <linearGradient id="commitArea" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#5b3ff6" stopOpacity="0.24" />
-              <stop offset="100%" stopColor="#5b3ff6" stopOpacity="0.03" />
+              <stop offset="0%" stopColor="var(--chart-fill)" />
+              <stop offset="100%" stopColor="var(--chart-fill-end)" />
             </linearGradient>
           </defs>
           {ticks.map((tick) => {

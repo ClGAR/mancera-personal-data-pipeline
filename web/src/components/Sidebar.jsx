@@ -66,7 +66,9 @@ function Sidebar({ activePage, onNavigate, auth }) {
           <div>
             <strong>Your data, your control.</strong>
             <p>All GitHub data is stored in your Supabase project.</p>
-            <a href="#integrations">Learn more</a>
+            <button className="inline-link" type="button" onClick={() => onNavigate('integrations')}>
+              Learn more
+            </button>
           </div>
         </div>
 

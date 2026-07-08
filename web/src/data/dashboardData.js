@@ -222,6 +222,7 @@ function buildTopReposData(apiRepos) {
         type: getRepoType(name, language, index),
         language,
         commits,
+        htmlUrl: repo.htmlUrl || repo.html_url || repo.url || '',
         lastActivity: formatDate(repo.lastCommitAt || repo.last_commit_at || repo.lastActivity || repo.pushed_at),
         visibility: repo.visibility || (repo.private ? 'Private' : 'Public'),
         trend: normalizeTrend(repo.trend, commits)
@@ -300,6 +301,8 @@ function buildSyncData(apiRuns, syncError = '') {
       ),
       commits: toNumber(run.commitsImported ?? run.commits_imported ?? run.commits_synced ?? run.commitsSynced ?? run.commits, 0),
       error: status === 'failed' ? errorMessage || 'No error message recorded' : '-',
+      startedAt,
+      completedAt: finishedAt,
       sortTime
     };
   }).sort((a, b) => b.sortTime - a.sortTime);
@@ -330,6 +333,7 @@ function buildIntegrationData(health, auth) {
   const authenticated = Boolean(auth?.authenticated);
   const username = auth?.user?.username || auth?.user?.displayName || '-';
   const aiProvider = String(integrations.aiProvider || health?.aiProvider || (integrations.ollama ? 'ollama' : 'anthropic')).toLowerCase();
+  const aiModel = health?.ai?.ollamaModel || health?.ollamaModel || 'llama3.2';
   const isOllama = aiProvider === 'ollama';
   const aiConfigured = isOllama ? Boolean(integrations.ollama) : Boolean(integrations.anthropic);
   const aiName = isOllama ? 'Ollama Local AI' : 'Anthropic Claude';
@@ -382,6 +386,7 @@ function buildIntegrationData(health, auth) {
         status: statusLabel(aiConfigured),
         details: [
           ['Provider', aiProviderLabel],
+          ['Model', isOllama ? aiModel : '-'],
           ['Configured', statusLabel(aiConfigured)]
         ]
       };
@@ -393,7 +398,9 @@ function buildIntegrationData(health, auth) {
   return {
     source: 'api',
     overview,
-    cards
+    cards,
+    aiProvider,
+    aiModel
   };
 }
 

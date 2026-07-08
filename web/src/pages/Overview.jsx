@@ -1,5 +1,8 @@
 import { ArrowRight, Bot, ChevronRight, Clock3, Copy, Github, Plug, Send, ThumbsDown, ThumbsUp, Timer, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { askChatbot } from '../api.js';
 import Badge from '../components/Badge.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import LineChartCard from '../components/LineChartCard.jsx';
 import MiniSparkline from '../components/MiniSparkline.jsx';
 import RepoIcon from '../components/RepoIcon.jsx';
@@ -13,7 +16,7 @@ const integrationIcons = {
   ai: Bot
 };
 
-function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
+function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify }) {
   const weekly = dashboardData?.weekly;
   const topRepos = dashboardData?.topRepos;
   const sync = dashboardData?.sync;
@@ -22,6 +25,11 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
   const overviewRepos = topRepos?.overviewRepos || [];
   const leadingRepo = overviewRepos[0];
   const chartMax = getChartMax(overviewActivity, 10);
+  const [chatInput, setChatInput] = useState('');
+  const [chatAsking, setChatAsking] = useState(false);
+  const [feedback, setFeedback] = useState({});
+  const [miniMessages, setMiniMessages] = useState(() => buildMiniStarter(leadingRepo));
+
   const repoColumns = [
     {
       key: 'name',
@@ -41,6 +49,52 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
       render: (repo) => <MiniSparkline data={repo.trend} variant="primary" filled className="table-sparkline" />
     }
   ];
+
+  async function sendMiniQuestion(event) {
+    event.preventDefault();
+    const question = chatInput.trim();
+    if (!question || chatAsking) return;
+
+    const requestId = Date.now();
+    const time = getTimeLabel();
+    setChatInput('');
+    setChatAsking(true);
+    setMiniMessages((current) => [
+      ...current,
+      { id: `mini-user-${requestId}`, role: 'user', content: question, time },
+      { id: `mini-ai-${requestId}`, role: 'ai', content: 'Thinking through your synced GitHub data...', time, loading: true }
+    ]);
+
+    try {
+      const result = await askChatbot(question);
+      setMiniMessages((current) =>
+        current.map((message) =>
+          message.id === `mini-ai-${requestId}`
+            ? { ...message, content: result?.answer || 'No answer text was returned.', loading: false, source: result?.source }
+            : message
+        )
+      );
+      if (result?.source === 'supabase-fallback') {
+        notify?.('Ollama was unavailable, so the answer used synced Supabase data.', 'warning', 'AI fallback used');
+      }
+    } catch (error) {
+      setMiniMessages((current) =>
+        current.map((message) =>
+          message.id === `mini-ai-${requestId}`
+            ? { ...message, content: error.message || 'The chatbot could not respond right now.', loading: false, error: true }
+            : message
+        )
+      );
+      notify?.(error.message || 'The chatbot could not respond right now.', 'error', 'Chatbot error');
+    } finally {
+      setChatAsking(false);
+    }
+  }
+
+  async function copyMessage(message) {
+    await navigator.clipboard.writeText(message.content);
+    notify?.('Copied chatbot response to clipboard.', 'success', 'Copied');
+  }
 
   return (
     <>
@@ -78,17 +132,21 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
             <Badge variant="success">Hourly Cron</Badge>
           </div>
 
-          <div className="mini-sync-list">
-            {(sync?.overviewJobs || []).map((job) => (
-              <div className={`mini-sync-row ${job.isLatestSuccess ? 'latest-success-row' : ''}`} key={job.id}>
-                <span>{job.time}</span>
-                <Badge variant={getStatusVariant(job.status)} icon>
-                  {job.status}
-                </Badge>
-                <em>{job.duration}</em>
-              </div>
-            ))}
-          </div>
+          {sync?.overviewJobs?.length ? (
+            <div className="mini-sync-list">
+              {sync.overviewJobs.map((job) => (
+                <div className={`mini-sync-row ${job.isLatestSuccess ? 'latest-success-row' : ''}`} key={job.id}>
+                  <span>{job.time}</span>
+                  <Badge variant={getStatusVariant(job.status)} icon>
+                    {job.status}
+                  </Badge>
+                  <em>{job.duration}</em>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No sync jobs yet" message="Run Sync Now to create the first sync event." />
+          )}
 
           <button className="text-link" type="button" onClick={() => onNavigate('syncHistory')}>
             View all sync history
@@ -145,7 +203,11 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
               <ArrowRight size={15} aria-hidden="true" />
             </button>
           </div>
-          <Table columns={repoColumns} rows={overviewRepos} />
+          {overviewRepos.length ? (
+            <Table columns={repoColumns} rows={overviewRepos} />
+          ) : (
+            <EmptyState title="No repositories yet" message="Connect GitHub and run a sync to populate this table." />
+          )}
         </article>
 
         <article className="card overview-chat-card">
@@ -154,54 +216,86 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
               <Bot size={20} aria-hidden="true" />
               Ask your GitHub data
             </h2>
-            <button className="outline-button" type="button" onClick={() => onNavigate('chatbot')}>
+            <button className="outline-button" type="button" onClick={() => setMiniMessages(buildMiniStarter(leadingRepo))}>
               New Chat
             </button>
           </div>
 
           <div className="chat-thread compact-chat">
-            <div className="message-row user-message">
-              <div className="message-bubble">
-                <p>Which repo had the most commits this month?</p>
-                <span>09:15 AM</span>
-              </div>
-            </div>
-            <div className="message-row assistant-message">
-              <span className="ai-avatar">AI</span>
-              <div className="message-stack">
-                <div className="message-bubble">
-                  <p>
-                    {leadingRepo
-                      ? `Your repository "${leadingRepo.name}" is leading activity with ${leadingRepo.commits} commits.`
-                      : 'Your connected repository insights will appear here after the first sync.'}
-                  </p>
-                  <span>09:15 AM</span>
+            {miniMessages.map((message) => (
+              <div className={`message-row ${message.role === 'user' ? 'user-message' : 'assistant-message'}`} key={message.id}>
+                {message.role === 'ai' ? <span className="ai-avatar">AI</span> : null}
+                <div className="message-stack">
+                  <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
+                    <p>{message.content}</p>
+                    <span>{message.time}</span>
+                  </div>
+                  {message.role === 'ai' ? (
+                    <div className="feedback-actions">
+                      <button type="button" aria-label="Copy response" onClick={() => copyMessage(message)}>
+                        <Copy size={16} aria-hidden="true" />
+                      </button>
+                      <button
+                        className={feedback[message.id] === 'up' ? 'active-feedback' : ''}
+                        type="button"
+                        aria-label="Like response"
+                        onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'up' ? '' : 'up' }))}
+                      >
+                        <ThumbsUp size={16} aria-hidden="true" />
+                      </button>
+                      <button
+                        className={feedback[message.id] === 'down' ? 'active-feedback' : ''}
+                        type="button"
+                        aria-label="Dislike response"
+                        onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'down' ? '' : 'down' }))}
+                      >
+                        <ThumbsDown size={16} aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-                <div className="feedback-actions">
-                  <button type="button" aria-label="Copy response">
-                    <Copy size={16} aria-hidden="true" />
-                  </button>
-                  <button type="button" aria-label="Like response">
-                    <ThumbsUp size={16} aria-hidden="true" />
-                  </button>
-                  <button type="button" aria-label="Dislike response">
-                    <ThumbsDown size={16} aria-hidden="true" />
-                  </button>
-                </div>
               </div>
-            </div>
+            ))}
           </div>
 
-          <div className="chat-form fake-chat-form">
-            <span>Ask anything about your GitHub data...</span>
-            <button className="primary-icon-button" type="button" onClick={() => onNavigate('chatbot')} aria-label="Open chatbot">
+          <form className="chat-form" onSubmit={sendMiniQuestion}>
+            <input
+              value={chatInput}
+              onChange={(event) => setChatInput(event.target.value)}
+              placeholder="Ask anything about your GitHub data..."
+              aria-label="Ask anything about your GitHub data"
+            />
+            <button className="primary-icon-button" type="submit" disabled={chatAsking} aria-label="Send question">
               <Send size={18} aria-hidden="true" />
             </button>
-          </div>
+          </form>
         </article>
       </section>
     </>
   );
+}
+
+function buildMiniStarter(repo) {
+  return [
+    {
+      id: 'mini-starter-user',
+      role: 'user',
+      content: 'Which repo had the most commits this month?',
+      time: '09:15 AM'
+    },
+    {
+      id: 'mini-starter-ai',
+      role: 'ai',
+      content: repo
+        ? `Your repository "${repo.name}" is leading activity with ${repo.commits} commits.`
+        : 'Your connected repository insights will appear here after the first sync.',
+      time: '09:15 AM'
+    }
+  ];
+}
+
+function getTimeLabel() {
+  return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function getChartMax(data, fallback) {
