@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Calendar, Clock3, Filter, Info, ListFilter } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import Table from '../components/Table.jsx';
 
 function SyncHistory({ dashboardData, isLoading, dataMessage }) {
-  const syncHistory = dashboardData?.sync?.history || [];
+  const [statusFilter, setStatusFilter] = useState('all');
+  const sync = dashboardData?.sync || {};
+  const syncHistory = sync.history || [];
+  const filteredHistory =
+    statusFilter === 'all' ? syncHistory : syncHistory.filter((row) => row.status === statusFilter);
   const columns = [
     {
       key: 'time',
@@ -51,18 +56,37 @@ function SyncHistory({ dashboardData, isLoading, dataMessage }) {
   return (
     <section className="sync-history-layout">
       {isLoading ? <div className="state-banner">Loading sync history...</div> : null}
-      {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
+      {!isLoading && sync.errorMessage ? <div className="state-banner error">Sync history could not load: {sync.errorMessage}</div> : null}
+      {!isLoading && !sync.errorMessage && sync.emptyMessage ? <div className="state-banner muted-banner">{sync.emptyMessage}</div> : null}
+      {!isLoading && dataMessage && !sync.errorMessage && !sync.emptyMessage ? (
+        <div className="state-banner muted-banner">{dataMessage}</div>
+      ) : null}
 
       <div className="filter-toolbar">
         <div className="filter-group">
-          <button className="filter-chip active" type="button">
+          <button
+            className={`filter-chip ${statusFilter === 'all' ? 'active' : ''}`.trim()}
+            type="button"
+            aria-pressed={statusFilter === 'all'}
+            onClick={() => setStatusFilter('all')}
+          >
             All
           </button>
-          <button className="filter-chip" type="button">
+          <button
+            className={`filter-chip ${statusFilter === 'success' ? 'active' : ''}`.trim()}
+            type="button"
+            aria-pressed={statusFilter === 'success'}
+            onClick={() => setStatusFilter('success')}
+          >
             <span className="status-dot" />
             Success
           </button>
-          <button className="filter-chip" type="button">
+          <button
+            className={`filter-chip ${statusFilter === 'failed' ? 'active' : ''}`.trim()}
+            type="button"
+            aria-pressed={statusFilter === 'failed'}
+            onClick={() => setStatusFilter('failed')}
+          >
             <span className="status-dot danger" />
             Failed
           </button>
@@ -87,7 +111,10 @@ function SyncHistory({ dashboardData, isLoading, dataMessage }) {
             Sync Runs
           </h2>
         </div>
-        <Table columns={columns} rows={syncHistory} className="sync-history-table" />
+        {!isLoading && filteredHistory.length === 0 ? (
+          <div className="state-banner muted-banner">No sync runs match the selected filter.</div>
+        ) : null}
+        <Table columns={columns} rows={filteredHistory} className="sync-history-table" />
       </article>
     </section>
   );

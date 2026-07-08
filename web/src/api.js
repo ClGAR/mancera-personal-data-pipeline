@@ -60,6 +60,10 @@ export function getSyncRuns() {
   return request('/sync/runs');
 }
 
+export function getSyncHistory() {
+  return request('/stats/sync-history');
+}
+
 export function runManualSync() {
   return request('/stats/sync', {
     method: 'POST'
@@ -88,6 +92,7 @@ export const api = {
   getWeeklyStats,
   getTopRepos,
   getSyncRuns,
+  getSyncHistory,
   runManualSync,
   syncNow: runManualSync,
   askChatbot,

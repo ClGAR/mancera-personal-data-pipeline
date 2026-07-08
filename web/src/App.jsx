@@ -7,7 +7,7 @@ import Settings from './pages/Settings.jsx';
 import SyncHistory from './pages/SyncHistory.jsx';
 import TopRepos from './pages/TopRepos.jsx';
 import WeeklyStats from './pages/WeeklyStats.jsx';
-import { getCurrentUser, getHealth, getSyncRuns, getTopRepos, getWeeklyStats, runManualSync } from './api.js';
+import { getCurrentUser, getHealth, getSyncHistory, getTopRepos, getWeeklyStats, runManualSync } from './api.js';
 import { buildDashboardData, getInitialDashboardData } from './data/dashboardData.js';
 import { pageMeta } from './data/mockData.js';
 
@@ -157,21 +157,22 @@ function App() {
 }
 
 async function fetchDashboardData(auth) {
-  const [weeklyResult, topReposResult, syncRunsResult, healthResult] = await Promise.allSettled([
+  const [weeklyResult, topReposResult, syncHistoryResult, healthResult] = await Promise.allSettled([
     getWeeklyStats(),
     getTopRepos(),
-    getSyncRuns(),
+    getSyncHistory(),
     getHealth()
   ]);
 
   const data = buildDashboardData({
     weekly: getSettledValue(weeklyResult),
     topRepos: getSettledValue(topReposResult),
-    syncRuns: getSettledValue(syncRunsResult),
+    syncHistory: getSettledValue(syncHistoryResult),
+    syncError: getSettledErrorMessage(syncHistoryResult),
     health: getSettledValue(healthResult),
     auth
   });
-  const rejected = [weeklyResult, topReposResult, syncRunsResult].filter((result) => result.status === 'rejected');
+  const rejected = [weeklyResult, topReposResult, syncHistoryResult].filter((result) => result.status === 'rejected');
 
   return {
     data,
@@ -181,6 +182,10 @@ async function fetchDashboardData(auth) {
 
 function getSettledValue(result) {
   return result.status === 'fulfilled' ? result.value : null;
+}
+
+function getSettledErrorMessage(result) {
+  return result.status === 'rejected' ? result.reason?.message || 'Request failed' : '';
 }
 
 function normalizeAuth(payload) {

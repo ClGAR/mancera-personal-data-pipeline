@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase.js';
 
 const WEEK_DAYS = 7;
+const SYNC_HISTORY_LIMIT = 50;
 
 export async function getWeeklyStats(user) {
   if (!supabase || user.isDemo) return demoWeeklyStats();
@@ -82,6 +83,29 @@ export async function getRecentSyncRuns(user) {
 
   if (error) throw error;
   return data || [];
+}
+
+export async function getSyncHistory(user) {
+  if (!supabase || user.isDemo) {
+    return {
+      items: []
+    };
+  }
+
+  const userId = user.userId || user.user_id || user.id;
+  const { data, error } = await supabase
+    .from('sync_runs')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', ['success', 'failed'])
+    .order('created_at', { ascending: false })
+    .limit(SYNC_HISTORY_LIMIT);
+
+  if (error) throw error;
+
+  return {
+    items: (data || []).map(mapSyncHistoryRun)
+  };
 }
 
 export async function getChatbotContext(user) {
@@ -187,4 +211,61 @@ function demoSyncRuns() {
       created_at: new Date(Date.now() - 3600000).toISOString()
     }
   ];
+}
+
+function mapSyncHistoryRun(run) {
+  const startedAt = firstValue(run.started_at, run.startedAt, run.created_at, run.createdAt);
+  const completedAt = firstValue(
+    run.finished_at,
+    run.finishedAt,
+    run.completed_at,
+    run.completedAt,
+    run.ended_at,
+    run.endedAt
+  );
+  const errorMessage = firstValue(run.error_message, run.errorMessage, run.error, null);
+
+  return {
+    id: String(run.id),
+    startedAt,
+    completedAt,
+    status: normalizeSyncHistoryStatus(run.status),
+    durationSeconds: getDurationSeconds(run, startedAt, completedAt),
+    repositoriesSynced: toNumber(
+      firstValue(run.repos_synced, run.reposSynced, run.repositories_synced, run.repositoriesSynced, run.repositories),
+      0
+    ),
+    commitsImported: toNumber(
+      firstValue(run.commits_synced, run.commitsSynced, run.commits_imported, run.commitsImported, run.commits),
+      0
+    ),
+    errorMessage: errorMessage || null
+  };
+}
+
+function normalizeSyncHistoryStatus(status) {
+  return String(status || '').toLowerCase() === 'failed' ? 'failed' : 'success';
+}
+
+function getDurationSeconds(run, startedAt, completedAt) {
+  const configuredDuration = firstValue(run.duration_seconds, run.durationSeconds, run.duration);
+  const configuredSeconds = toNumber(configuredDuration, null);
+  if (configuredSeconds !== null) return configuredSeconds;
+
+  if (!startedAt || !completedAt) return null;
+
+  const start = new Date(startedAt);
+  const finish = new Date(completedAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(finish.getTime())) return null;
+
+  return Math.max(0, Math.round((finish.getTime() - start.getTime()) / 1000));
+}
+
+function firstValue(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '');
+}
+
+function toNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
 }

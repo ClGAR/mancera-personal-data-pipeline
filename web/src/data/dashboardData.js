@@ -16,10 +16,10 @@ import {
 const repoTypes = ['site', 'database', 'terminal', 'notes', 'supabase', 'docs', 'app'];
 const languages = ['TypeScript', 'JavaScript', 'Python', 'Markdown'];
 
-export function buildDashboardData({ weekly, topRepos, syncRuns, health, auth } = {}) {
+export function buildDashboardData({ weekly, topRepos, syncHistory, syncRuns, syncError, health, auth } = {}) {
   const weeklyData = buildWeeklyData(weekly);
   const repoData = buildTopReposData(topRepos);
-  const syncData = buildSyncData(syncRuns);
+  const syncData = buildSyncData(syncHistory ?? syncRuns, syncError);
   const integrationData = buildIntegrationData(health, auth);
 
   return {
@@ -268,48 +268,51 @@ function buildTopReposData(apiRepos) {
   };
 }
 
-function buildSyncData(apiRuns) {
-  if (!Array.isArray(apiRuns) || apiRuns.length === 0) {
+function buildSyncData(apiRuns, syncError = '') {
+  const runs = Array.isArray(apiRuns?.items) ? apiRuns.items : Array.isArray(apiRuns) ? apiRuns : [];
+
+  if (runs.length === 0) {
     return {
       source: 'mock',
       history: mockSyncHistory,
-      overviewJobs: mockOverviewSyncJobs
+      overviewJobs: mockOverviewSyncJobs,
+      errorMessage: syncError,
+      emptyMessage: syncError ? '' : 'No real sync history found yet. Showing sample sync runs until the first sync is recorded.'
     };
   }
 
-  const history = apiRuns.map((run, index) => {
-    const startedAt = run.started_at || run.startedAt || run.created_at || run.createdAt;
-    const finishedAt = run.finished_at || run.finishedAt;
+  const history = runs.map((run, index) => {
+    const startedAt = run.startedAt || run.started_at || run.created_at || run.createdAt;
+    const finishedAt = run.completedAt || run.completed_at || run.finished_at || run.finishedAt;
     const status = run.status || 'unknown';
-    const sortTime = getTimestamp(finishedAt || startedAt);
+    const sortTime = getTimestamp(startedAt || finishedAt);
+    const errorMessage = run.errorMessage || run.error_message || run.error || '';
 
     return {
       id: run.id || `sync-${index}`,
       time: formatDateTime(startedAt) || 'Unknown time',
       relative: formatRelative(startedAt),
       status,
-      duration: formatDuration(startedAt, finishedAt),
-      repositories: toNumber(run.repos_synced ?? run.reposSynced ?? run.repositories, 0),
-      commits: toNumber(run.commits_synced ?? run.commitsSynced ?? run.commits, 0),
-      error: run.error_message || run.errorMessage || run.error || '-',
+      duration: formatDurationLabel(run.durationSeconds ?? run.duration_seconds, startedAt, finishedAt),
+      repositories: toNumber(
+        run.repositoriesSynced ?? run.repositories_synced ?? run.repos_synced ?? run.reposSynced ?? run.repositories,
+        0
+      ),
+      commits: toNumber(run.commitsImported ?? run.commits_imported ?? run.commits_synced ?? run.commitsSynced ?? run.commits, 0),
+      error: status === 'failed' ? errorMessage || 'No error message recorded' : '-',
       sortTime
     };
   }).sort((a, b) => b.sortTime - a.sortTime);
 
-  const latestSuccessfulRun = history.find((run) => run.status === 'success');
-  const overviewSource = latestSuccessfulRun
-    ? [latestSuccessfulRun, ...history.filter((run) => run.id !== latestSuccessfulRun.id)]
-    : history;
-
   return {
     source: 'api',
     history,
-    overviewJobs: overviewSource.slice(0, 5).map((run) => ({
+    overviewJobs: history.slice(0, 5).map((run, index) => ({
       id: run.id,
       time: run.relative || run.time,
       status: run.status,
       duration: run.duration,
-      isLatestSuccess: latestSuccessfulRun?.id === run.id
+      isLatestSuccess: index === 0 && run.status === 'success'
     }))
   };
 }
@@ -477,6 +480,13 @@ function formatDuration(startedAt, finishedAt) {
   if (Number.isNaN(start.getTime()) || Number.isNaN(finish.getTime())) return '-';
   const seconds = Math.max(0, Math.round((finish.getTime() - start.getTime()) / 1000));
   return `${seconds}s`;
+}
+
+function formatDurationLabel(durationSeconds, startedAt, finishedAt) {
+  const seconds = toNumber(durationSeconds, null);
+  if (seconds !== null) return `${seconds}s`;
+
+  return formatDuration(startedAt, finishedAt);
 }
 
 function getTimestamp(value) {

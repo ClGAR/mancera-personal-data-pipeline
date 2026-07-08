@@ -208,7 +208,10 @@ If no webhook URL is configured, sync still succeeds and reports that webhook de
 
 - `GET /stats/weekly`
 - `GET /stats/top-repos`
+- `GET /stats/sync-history`
 - `POST /stats/sync`
+
+`GET /stats/sync-history` returns the authenticated user's latest 50 Supabase `sync_runs` records in frontend-ready shape. It powers the Sync History page and the Overview Sync Jobs card.
 
 ### Sync
 
