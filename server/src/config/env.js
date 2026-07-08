@@ -5,10 +5,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const serverRoot = path.resolve(__dirname, '../..');
-const projectRoot = path.resolve(serverRoot, '..');
+const serverEnvPath = path.join(serverRoot, '.env');
 
-dotenv.config({ path: path.join(projectRoot, '.env') });
-dotenv.config({ path: path.join(serverRoot, '.env') });
+dotenv.config({ path: serverEnvPath });
 
 const optional = (value, fallback = '') => value || fallback;
 
@@ -42,7 +41,7 @@ export const env = {
 
 export const flags = {
   hasGithubOAuth: Boolean(env.github.clientId && env.github.clientSecret),
-  hasSupabase: Boolean(env.supabase.url && env.supabase.serviceRoleKey),
+  hasSupabase: Boolean(env.supabase.url && env.supabase.anonKey && env.supabase.serviceRoleKey),
   hasAnthropic: Boolean(env.anthropic.apiKey),
   hasN8nWebhook: Boolean(env.n8n.webhookUrl)
 };

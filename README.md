@@ -73,10 +73,10 @@ The app will start without real credentials. In that mode, the backend returns d
 
 ## Environment variables
 
-Create a `.env` file from `.env.example` when you are ready to connect services.
+Create `server/.env` manually from `.env.example` when you are ready to connect services. The backend always loads environment variables from `server/.env`, even if you run commands from the project root.
 
 ```bash
-cp .env.example .env
+cp .env.example server/.env
 ```
 
 Important variables:
@@ -101,7 +101,7 @@ Never commit `.env` or any real secrets.
 3. Run `server/src/db/schema.sql`.
 4. Review `server/src/db/rls.sql`.
 5. Enable RLS policies only after you decide how frontend users map to Supabase Auth or trusted JWT claims.
-6. Add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to `.env`.
+6. Add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to `server/.env`.
 
 The Express server uses the service role key only on the backend. Do not expose it in React.
 
@@ -111,7 +111,7 @@ The Express server uses the service role key only on the backend. Do not expose 
 2. Create a new OAuth App.
 3. Set Homepage URL to `http://localhost:5173`.
 4. Set Authorization callback URL to `http://localhost:4000/auth/github/callback`.
-5. Add the client ID and secret to `.env`.
+5. Add the client ID and secret to `server/.env`.
 6. Visit `http://localhost:4000/auth/github` or use the Connect GitHub button in the dashboard.
 
 The OAuth scope is `read:user repo` so the sync service can read the authenticated user's repositories and commits.
@@ -120,7 +120,7 @@ The OAuth scope is `read:user repo` so the sync service can read the authenticat
 
 1. Create an n8n workflow with a Webhook trigger.
 2. Copy the production webhook URL.
-3. Add it to `.env` as `N8N_WEBHOOK_URL`.
+3. Add it to `server/.env` as `N8N_WEBHOOK_URL`.
 4. Run a sync. The backend posts user id, sync status, repos synced, commits synced, and timestamp.
 
 If no webhook URL is configured, sync still succeeds and reports that webhook delivery was skipped.

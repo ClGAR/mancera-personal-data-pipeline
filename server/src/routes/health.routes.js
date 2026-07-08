@@ -8,7 +8,7 @@ router.get('/', (req, res) => {
     status: 'ok',
     service: 'personal-data-pipeline-api',
     integrations: {
-      githubOAuth: flags.hasGithubOAuth,
+      githubOauth: flags.hasGithubOAuth,
       supabase: flags.hasSupabase,
       anthropic: flags.hasAnthropic,
       n8nWebhook: flags.hasN8nWebhook

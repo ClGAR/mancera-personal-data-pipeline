@@ -12,7 +12,7 @@ export const supabase = flags.hasSupabase
 
 export function requireSupabase() {
   if (!supabase) {
-    const error = new Error('Supabase is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+    const error = new Error('Supabase is not configured. Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY.');
     error.statusCode = 503;
     throw error;
   }
