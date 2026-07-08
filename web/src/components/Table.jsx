@@ -5,7 +5,9 @@ function Table({ columns, rows, className = '' }) {
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.key}>{column.label}</th>
+              <th key={column.key} scope="col" aria-sort={column.sortDirection || undefined}>
+                {column.label}
+              </th>
             ))}
           </tr>
         </thead>

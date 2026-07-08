@@ -43,7 +43,7 @@ const themeOptions = [
 const quickActions = [
   { title: 'Sync Now', detail: 'Trigger an immediate data sync', icon: RefreshCcw, tone: 'primary', action: 'sync' },
   { title: 'Export My Data', detail: 'Download your data snapshot', icon: Download, tone: 'primary', action: 'export' },
-  { title: 'Clear Local Cache', detail: 'Free up space and reset local UI state', icon: Trash2, tone: 'danger', action: 'clear' }
+  { title: 'Clear Local Cache', detail: 'Clear local preferences and cached UI state.', icon: Trash2, tone: 'danger', action: 'clear' }
 ];
 
 const summaryIcons = [Calendar, Zap, Database, RefreshCcw];
@@ -82,6 +82,7 @@ function Settings({
     readStoredObject('pdp:notification-preferences', defaultNotificationPrefs)
   );
   const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [cacheConfirmOpen, setCacheConfirmOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
   const { themePreference, resolvedTheme, setThemePreference } = useTheme();
   const activeSection = settingsSection || 'profile';
@@ -116,7 +117,12 @@ function Settings({
   function handleQuickAction(action) {
     if (action === 'sync') onRunSync?.();
     if (action === 'export') onExportData?.();
-    if (action === 'clear') onClearLocalCache?.();
+    if (action === 'clear') setCacheConfirmOpen(true);
+  }
+
+  function confirmClearLocalCache() {
+    setCacheConfirmOpen(false);
+    onClearLocalCache?.();
   }
 
   return (
@@ -158,7 +164,7 @@ function Settings({
           setThemePreference={setThemePreference}
           notify={notify}
           onExportData={onExportData}
-          onClearLocalCache={onClearLocalCache}
+          onRequestClearLocalCache={() => setCacheConfirmOpen(true)}
           onDisconnect={() => setDisconnectOpen(true)}
           syncing={syncing}
         />
@@ -204,7 +210,13 @@ function Settings({
               const Icon = action.icon;
 
               return (
-                <button className="quick-action-row" type="button" key={action.title} onClick={() => handleQuickAction(action.action)}>
+                <button
+                  className="quick-action-row"
+                  type="button"
+                  key={action.title}
+                  onClick={() => handleQuickAction(action.action)}
+                  disabled={action.action === 'sync' && syncing}
+                >
                   <span className={`quick-action-icon ${action.tone}`}>
                     <Icon size={19} aria-hidden="true" />
                   </span>
@@ -225,7 +237,7 @@ function Settings({
           <ShieldCheck size={25} aria-hidden="true" />
         </span>
         <div>
-          <strong>Your security is our priority</strong>
+          <strong>Security notes</strong>
           <p>Secrets stay in `server/.env`; production OAuth token encryption is still on the roadmap.</p>
         </div>
         <button className="text-link" type="button" onClick={() => setSecurityOpen(true)}>
@@ -242,6 +254,28 @@ function Settings({
         >
           <p className="modal-note">Backend disconnect endpoint is not implemented yet.</p>
           <p>This action is intentionally not faked. Add a backend disconnect route before removing stored GitHub account access.</p>
+        </Modal>
+      ) : null}
+
+      {cacheConfirmOpen ? (
+        <Modal
+          title="Clear local cache"
+          onClose={() => setCacheConfirmOpen(false)}
+          footer={
+            <>
+              <button className="outline-button neutral" type="button" onClick={() => setCacheConfirmOpen(false)}>
+                Cancel
+              </button>
+              <button className="primary-button danger-primary" type="button" onClick={confirmClearLocalCache}>
+                Clear local cache
+              </button>
+            </>
+          }
+        >
+          <p className="modal-note">
+            This clears local UI preferences, saved settings, and cached dashboard state in this browser. It does not delete your Supabase data or
+            GitHub account.
+          </p>
         </Modal>
       ) : null}
 
@@ -277,7 +311,7 @@ function SettingsSection({
   setThemePreference,
   notify,
   onExportData,
-  onClearLocalCache,
+  onRequestClearLocalCache,
   onDisconnect
 }) {
   if (section === 'github') {
@@ -312,6 +346,7 @@ function SettingsSection({
           <h2>Sync Preferences</h2>
           <p>These preferences are stored locally until backend persistence is added.</p>
         </div>
+        <LocalOnlyNote />
         <div className="settings-form">
           <ToggleRow label="Auto-sync hourly" checked={syncPrefs.autoSyncHourly} onChange={(value) => setSyncPrefs({ ...syncPrefs, autoSyncHourly: value })} />
           <ToggleRow label="Notify n8n after sync" checked={syncPrefs.notifyN8n} onChange={(value) => setSyncPrefs({ ...syncPrefs, notifyN8n: value })} />
@@ -321,7 +356,7 @@ function SettingsSection({
             onChange={(value) => setSyncPrefs({ ...syncPrefs, includePrivateRepos: value })}
           />
           <button className="primary-button save-button" type="button" onClick={saveSyncPreferences}>
-            Save Preferences
+            Save locally
           </button>
         </div>
       </>
@@ -356,6 +391,7 @@ function SettingsSection({
           <h2>Appearance</h2>
           <p>Choose how the dashboard theme should behave on this browser.</p>
         </div>
+        <LocalOnlyNote text="Saved in this browser and applied immediately." />
         <div className="settings-form">
           <label>
             <span>Theme Preference</span>
@@ -392,7 +428,7 @@ function SettingsSection({
             })}
           </div>
           <button className="primary-button save-button" type="button" onClick={() => notify?.('Theme preference saved.', 'success', 'Saved locally')}>
-            Save Appearance
+            Save locally
           </button>
         </div>
       </>
@@ -406,6 +442,7 @@ function SettingsSection({
           <h2>Notifications</h2>
           <p>Notification preferences are local to this browser for now.</p>
         </div>
+        <LocalOnlyNote />
         <div className="settings-form">
           <ToggleRow
             label="Sync success"
@@ -423,7 +460,7 @@ function SettingsSection({
             onChange={(value) => setNotificationPrefs({ ...notificationPrefs, aiFallback: value })}
           />
           <button className="primary-button save-button" type="button" onClick={saveNotificationPreferences}>
-            Save Notifications
+            Save locally
           </button>
         </div>
       </>
@@ -438,7 +475,7 @@ function SettingsSection({
           <p>These actions affect only frontend state unless a backend endpoint exists.</p>
         </div>
         <div className="danger-action-list">
-          <button className="outline-button neutral" type="button" onClick={onClearLocalCache}>
+          <button className="outline-button neutral" type="button" onClick={onRequestClearLocalCache}>
             <Trash2 size={16} aria-hidden="true" />
             Clear Local Cache
           </button>
@@ -457,6 +494,7 @@ function SettingsSection({
         <h2>Profile</h2>
         <p>Manage local profile display settings. GitHub data remains the source of truth.</p>
       </div>
+      <LocalOnlyNote text="Profile edits are saved locally for this browser session. Backend persistence not implemented yet." />
 
       <div className="profile-photo-row">
         <span className="photo-avatar">{initials}</span>
@@ -481,10 +519,19 @@ function SettingsSection({
           <em>Saved locally for this session only unless backend profile endpoints are added.</em>
         </label>
         <button className="primary-button save-button" type="submit">
-          Save Changes
+          Save locally
         </button>
       </form>
     </>
+  );
+}
+
+function LocalOnlyNote({ text = 'Local only. Saved in this browser. Backend persistence not implemented yet.' }) {
+  return (
+    <div className="local-only-note">
+      <span>Local only</span>
+      <p>{text}</p>
+    </div>
   );
 }
 

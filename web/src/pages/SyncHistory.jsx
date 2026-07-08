@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Clock3, Filter, Info, ListFilter, RefreshCcw } from 'lucide-react';
+import { Calendar, Clock3, Filter, Github, Info, ListFilter, RefreshCcw } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Modal from '../components/Modal.jsx';
@@ -12,7 +12,7 @@ const dateOptions = [
   { id: '30d', label: 'Last 30 Days' }
 ];
 
-function SyncHistory({ dashboardData, isLoading, dataMessage, syncing, onRunSync }) {
+function SyncHistory({ dashboardData, isLoading, dataMessage, syncing, onRunSync, onConnectGitHub, auth }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -117,9 +117,19 @@ function SyncHistory({ dashboardData, isLoading, dataMessage, syncing, onRunSync
             <Filter size={16} aria-hidden="true" />
             Advanced
           </button>
-          <button className="primary-button" type="button" onClick={onRunSync} disabled={syncing}>
-            <RefreshCcw className={syncing ? 'spin' : ''} size={16} aria-hidden="true" />
-            {syncing ? 'Syncing...' : 'Run Manual Sync'}
+          <button
+            className="primary-button"
+            type="button"
+            onClick={auth?.authenticated ? onRunSync : onConnectGitHub}
+            disabled={syncing || auth?.loading}
+            title={auth?.authenticated ? 'Run a manual GitHub sync' : 'Connect GitHub before syncing data.'}
+          >
+            {auth?.authenticated ? (
+              <RefreshCcw className={syncing ? 'spin' : ''} size={16} aria-hidden="true" />
+            ) : (
+              <Github size={16} aria-hidden="true" />
+            )}
+            {auth?.authenticated ? (syncing ? 'Syncing...' : 'Run Manual Sync') : 'Connect GitHub'}
           </button>
         </div>
       </div>

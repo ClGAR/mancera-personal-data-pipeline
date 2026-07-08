@@ -6,10 +6,10 @@ import { suggestedPrompts } from '../data/mockData.js';
 
 const promptIcons = [TrendingUp, Code2, Flame, Users, Calendar, Star, Sparkles, Lightbulb];
 const extraPrompts = [
-  'What changed since my latest sync?',
-  'Summarize my most active repositories',
-  'Which repository should I focus on next?',
-  'Did any sync runs fail recently?'
+  'Which repositories have been active recently?',
+  'How many commits were imported in the latest sync?',
+  'Did any sync runs fail recently?',
+  'Which repos have the lowest activity?'
 ];
 const emptyRepositories = [];
 
@@ -107,8 +107,12 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
   }
 
   async function copyResponse(message) {
-    await navigator.clipboard.writeText(message.content);
-    notify?.('Copied AI response to clipboard.', 'success', 'Copied');
+    try {
+      await navigator.clipboard.writeText(message.content);
+      notify?.('Copied AI response to clipboard.', 'success', 'Copied');
+    } catch {
+      notify?.('Clipboard access was unavailable in this browser.', 'warning', 'Copy unavailable');
+    }
   }
 
   return (
@@ -209,7 +213,7 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
             <Send size={18} aria-hidden="true" />
           </button>
         </form>
-        <p className="chat-disclaimer">Responses use local Ollama when available and stay grounded in synced GitHub data.</p>
+        <p className="chat-disclaimer">Answers are grounded in your synced repositories, commits, and sync history.</p>
       </article>
     </section>
   );

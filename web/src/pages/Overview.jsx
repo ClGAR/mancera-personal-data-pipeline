@@ -92,8 +92,12 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
   }
 
   async function copyMessage(message) {
-    await navigator.clipboard.writeText(message.content);
-    notify?.('Copied chatbot response to clipboard.', 'success', 'Copied');
+    try {
+      await navigator.clipboard.writeText(message.content);
+      notify?.('Copied chatbot response to clipboard.', 'success', 'Copied');
+    } catch {
+      notify?.('Clipboard access was unavailable in this browser.', 'warning', 'Copy unavailable');
+    }
   }
 
   return (
@@ -111,7 +115,7 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
         <LineChartCard
           title="Weekly Commit Activity"
           data={overviewActivity}
-          controls={['Latest activity']}
+          controls={[<span className="chart-note-chip" key="latest-activity">Latest activity</span>]}
           maxValue={chartMax}
           yTicks={buildTicks(chartMax)}
           className="overview-chart-card"
@@ -126,7 +130,7 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
               </h2>
               <span className="supporting-line">
                 <Clock3 size={14} aria-hidden="true" />
-                Automatic sync every hour
+                Backend cron sync runs hourly when enabled
               </span>
             </div>
             <Badge variant="success">Hourly Cron</Badge>
@@ -269,6 +273,7 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
               <Send size={18} aria-hidden="true" />
             </button>
           </form>
+          <p className="chat-disclaimer">Answers are grounded in your synced repositories, commits, and sync history.</p>
         </article>
       </section>
     </>

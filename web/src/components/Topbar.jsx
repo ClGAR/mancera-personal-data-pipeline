@@ -12,15 +12,18 @@ const themeOptions = [
   { value: 'system', label: 'System', icon: Monitor }
 ];
 
-function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], onNavigate, onLogout }) {
+function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], dataMode, onNavigate, onLogout, onConnectGitHub }) {
   const [openMenu, setOpenMenu] = useState('');
   const { themePreference, resolvedTheme, setThemePreference } = useTheme();
   const showAction = Boolean(meta.actionLabel);
-  const ActionIcon = meta.actionLabel === 'New Chat' ? Plus : RefreshCcw;
+  const isChatAction = meta.actionLabel === 'New Chat';
+  const needsGitHubConnection = showAction && !isChatAction && !auth?.authenticated;
+  const ActionIcon = needsGitHubConnection ? Github : isChatAction ? Plus : RefreshCcw;
   const user = auth?.user;
   const displayName = getUserDisplayName(user);
   const initials = getUserInitials(user);
-  const actionLabel = syncing && meta.actionLabel !== 'New Chat' ? 'Syncing...' : meta.actionLabel;
+  const actionLabel = needsGitHubConnection ? 'Connect GitHub' : syncing && !isChatAction ? 'Syncing...' : meta.actionLabel;
+  const actionDisabled = syncing || (!isChatAction && auth?.loading);
   const recentEvents = syncHistory.slice(0, 4);
   const selectedTheme = themeOptions.find((option) => option.value === themePreference) || themeOptions[2];
   const ThemeIcon = selectedTheme.icon;
@@ -33,6 +36,13 @@ function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], onNavi
       </div>
 
       <div className="topbar-actions">
+        {dataMode ? (
+          <span className={`data-mode-pill data-mode-${dataMode.tone}`} title={dataMode.title}>
+            <span className="status-dot" />
+            {dataMode.label}
+          </span>
+        ) : null}
+
         {auth?.authenticated ? (
           <button className="connected-button" type="button" onClick={() => onNavigate('integrations')} title="View GitHub integration">
             <Github size={18} aria-hidden="true" />
@@ -49,7 +59,13 @@ function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], onNavi
           </a>
         )}
         {showAction ? (
-          <button className="primary-button" type="button" onClick={onPrimaryAction} disabled={syncing}>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={needsGitHubConnection ? onConnectGitHub : onPrimaryAction}
+            disabled={actionDisabled}
+            title={needsGitHubConnection ? 'Connect GitHub before syncing data.' : actionLabel}
+          >
             <ActionIcon className={syncing && ActionIcon === RefreshCcw ? 'spin' : ''} size={17} aria-hidden="true" />
             {actionLabel}
           </button>
@@ -60,6 +76,7 @@ function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], onNavi
             className="icon-button theme-button"
             type="button"
             aria-label={`Theme preference: ${selectedTheme.label}`}
+            aria-haspopup="menu"
             aria-expanded={openMenu === 'theme'}
             title={`Theme: ${selectedTheme.label}`}
             onClick={() => setOpenMenu((current) => (current === 'theme' ? '' : 'theme'))}
@@ -104,7 +121,9 @@ function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], onNavi
             className="icon-button notification-button"
             type="button"
             aria-label="Notifications"
+            aria-haspopup="menu"
             aria-expanded={openMenu === 'notifications'}
+            title="Notifications"
             onClick={() => setOpenMenu((current) => (current === 'notifications' ? '' : 'notifications'))}
           >
             <Bell size={20} aria-hidden="true" />
@@ -140,7 +159,9 @@ function Topbar({ meta, onPrimaryAction, syncing, auth, syncHistory = [], onNavi
             className="profile-button"
             type="button"
             aria-label="Open profile menu"
+            aria-haspopup="menu"
             aria-expanded={openMenu === 'profile'}
+            title="Open profile menu"
             onClick={() => setOpenMenu((current) => (current === 'profile' ? '' : 'profile'))}
           >
             <span className="avatar">{initials}</span>

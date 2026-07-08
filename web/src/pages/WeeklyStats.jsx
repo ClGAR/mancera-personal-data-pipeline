@@ -8,8 +8,8 @@ import Table from '../components/Table.jsx';
 
 const rangeOptions = [
   { label: 'Last 7 days', days: 7 },
-  { label: 'Last 14 days', days: 14 },
-  { label: 'Last 30 days', days: 30 }
+  { label: 'Last 14 days (local estimate)', days: 14 },
+  { label: 'Last 30 days (local estimate)', days: 30 }
 ];
 
 function WeeklyStats({ dashboardData, isLoading, dataMessage, onNavigate }) {
@@ -39,10 +39,16 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage, onNavigate }) {
     {
       key: 'commits',
       label: (
-        <button className="table-sort-button" type="button" onClick={() => setSortDirection((current) => (current === 'desc' ? 'asc' : 'desc'))}>
-          Commits {sortDirection === 'desc' ? '↓' : '↑'}
+        <button
+          className="table-sort-button"
+          type="button"
+          aria-label={`Sort commits ${sortDirection === 'desc' ? 'ascending' : 'descending'}`}
+          onClick={() => setSortDirection((current) => (current === 'desc' ? 'asc' : 'desc'))}
+        >
+          Commits {sortDirection === 'desc' ? 'Desc' : 'Asc'}
         </button>
-      )
+      ),
+      sortDirection: sortDirection === 'desc' ? 'descending' : 'ascending'
     },
     {
       key: 'previous',
@@ -63,7 +69,7 @@ function WeeklyStats({ dashboardData, isLoading, dataMessage, onNavigate }) {
       {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
       {frontendOnlyRange ? (
         <div className="state-banner muted-banner">
-          The backend currently returns a 7-day window. This {rangeDays}-day view is a frontend-only projection from available synced data.
+          Local estimate: the backend currently returns a 7-day window, so this {rangeDays}-day range is projected from available synced data.
         </div>
       ) : null}
 

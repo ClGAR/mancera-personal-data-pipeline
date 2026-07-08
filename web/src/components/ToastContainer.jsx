@@ -16,7 +16,12 @@ function ToastContainer({ toasts, onDismiss }) {
         const Icon = icons[toast.type] || Info;
 
         return (
-          <article className={`toast toast-${toast.type || 'info'}`} key={toast.id}>
+          <article
+            className={`toast toast-${toast.type || 'info'}`}
+            key={toast.id}
+            role={toast.type === 'error' ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+          >
             <Icon size={18} aria-hidden="true" />
             <div>
               <strong>{toast.title || getDefaultTitle(toast.type)}</strong>

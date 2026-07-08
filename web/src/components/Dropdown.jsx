@@ -21,7 +21,7 @@ function Dropdown({ align = 'right', children, onClose }) {
   }, [onClose]);
 
   return (
-    <div className={`dropdown-panel dropdown-${align}`} ref={ref}>
+    <div className={`dropdown-panel dropdown-${align}`} role="menu" ref={ref}>
       {children}
     </div>
   );

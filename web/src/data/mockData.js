@@ -114,11 +114,11 @@ export const overviewIntegrations = [
 ];
 
 export const overviewRepos = [
-  { name: 'alexjohnson/portfolio', type: 'site', commits: 48, lastActivity: 'May 19, 2025', trend: [7, 13, 9, 18, 14, 27, 19, 31, 23, 29, 25] },
-  { name: 'alexjohnson/data-pipeline', type: 'database', commits: 36, lastActivity: 'May 18, 2025', trend: [8, 10, 9, 15, 14, 25, 17, 29, 22, 27, 20] },
-  { name: 'alexjohnson/cli-tools', type: 'terminal', commits: 22, lastActivity: 'May 17, 2025', trend: [4, 9, 12, 8, 5, 10, 13, 15, 9, 12, 8] },
-  { name: 'alexjohnson/notes', type: 'notes', commits: 12, lastActivity: 'May 15, 2025', trend: [5, 6, 4, 8, 5, 12, 9, 10, 8, 7, 6] },
-  { name: 'alexjohnson/supabase-starter', type: 'supabase', commits: 10, lastActivity: 'May 14, 2025', trend: [3, 6, 8, 4, 2, 7, 5, 9, 8, 7, 6] }
+  { name: 'demo-user/portfolio', type: 'site', commits: 48, lastActivity: 'May 19, 2025', trend: [7, 13, 9, 18, 14, 27, 19, 31, 23, 29, 25] },
+  { name: 'demo-user/data-pipeline', type: 'database', commits: 36, lastActivity: 'May 18, 2025', trend: [8, 10, 9, 15, 14, 25, 17, 29, 22, 27, 20] },
+  { name: 'demo-user/cli-tools', type: 'terminal', commits: 22, lastActivity: 'May 17, 2025', trend: [4, 9, 12, 8, 5, 10, 13, 15, 9, 12, 8] },
+  { name: 'demo-user/notes', type: 'notes', commits: 12, lastActivity: 'May 15, 2025', trend: [5, 6, 4, 8, 5, 12, 9, 10, 8, 7, 6] },
+  { name: 'demo-user/supabase-starter', type: 'supabase', commits: 10, lastActivity: 'May 14, 2025', trend: [3, 6, 8, 4, 2, 7, 5, 9, 8, 7, 6] }
 ];
 
 export const weeklyStats = [
@@ -151,7 +151,7 @@ export const dayBreakdown = [
 export const topRepoHighlights = [
   {
     title: 'Most Active Repo',
-    repo: 'alexjohnson/portfolio',
+    repo: 'demo-user/portfolio',
     value: '128 commits',
     change: '+18% more than last 30 days',
     tone: 'primary',
@@ -159,7 +159,7 @@ export const topRepoHighlights = [
   },
   {
     title: 'Fastest Growing Repo',
-    repo: 'alexjohnson/supabase-starter',
+    repo: 'demo-user/supabase-starter',
     value: '+240%',
     change: 'commit growth',
     tone: 'success',
@@ -168,14 +168,14 @@ export const topRepoHighlights = [
 ];
 
 export const repositories = [
-  { rank: 1, name: 'alexjohnson/portfolio', type: 'site', language: 'TypeScript', commits: 128, lastActivity: 'May 19, 2025', visibility: 'Public', trend: [8, 12, 11, 16, 18, 14, 17, 20, 15, 19, 17] },
-  { rank: 2, name: 'alexjohnson/data-pipeline', type: 'database', language: 'Python', commits: 86, lastActivity: 'May 18, 2025', visibility: 'Private', trend: [6, 8, 7, 12, 10, 13, 15, 17, 14, 16, 12] },
-  { rank: 3, name: 'alexjohnson/cli-tools', type: 'terminal', language: 'TypeScript', commits: 54, lastActivity: 'May 17, 2025', visibility: 'Public', trend: [5, 8, 7, 9, 8, 10, 11, 13, 12, 10, 9] },
-  { rank: 4, name: 'alexjohnson/notes', type: 'notes', language: 'Markdown', commits: 42, lastActivity: 'May 15, 2025', visibility: 'Private', trend: [7, 9, 8, 12, 9, 11, 10, 8, 9, 7, 6] },
-  { rank: 5, name: 'alexjohnson/supabase-starter', type: 'supabase', language: 'TypeScript', commits: 38, lastActivity: 'May 14, 2025', visibility: 'Public', trend: [3, 6, 7, 10, 9, 13, 11, 15, 14, 17, 18] },
-  { rank: 6, name: 'alexjohnson/blog', type: 'docs', language: 'JavaScript', commits: 26, lastActivity: 'May 13, 2025', visibility: 'Public', trend: [4, 6, 7, 6, 8, 9, 10, 12, 11, 12, 10] },
-  { rank: 7, name: 'alexjohnson/todo-app', type: 'app', language: 'TypeScript', commits: 18, lastActivity: 'May 12, 2025', visibility: 'Private', trend: [10, 12, 13, 11, 8, 7, 9, 8, 7, 6, 7] },
-  { rank: 8, name: 'alexjohnson/api-client', type: 'app', language: 'Python', commits: 15, lastActivity: 'May 11, 2025', visibility: 'Private', trend: [3, 5, 8, 10, 11, 12, 9, 10, 8, 7, 6] }
+  { rank: 1, name: 'demo-user/portfolio', type: 'site', language: 'TypeScript', commits: 128, lastActivity: 'May 19, 2025', visibility: 'Public', trend: [8, 12, 11, 16, 18, 14, 17, 20, 15, 19, 17] },
+  { rank: 2, name: 'demo-user/data-pipeline', type: 'database', language: 'Python', commits: 86, lastActivity: 'May 18, 2025', visibility: 'Private', trend: [6, 8, 7, 12, 10, 13, 15, 17, 14, 16, 12] },
+  { rank: 3, name: 'demo-user/cli-tools', type: 'terminal', language: 'TypeScript', commits: 54, lastActivity: 'May 17, 2025', visibility: 'Public', trend: [5, 8, 7, 9, 8, 10, 11, 13, 12, 10, 9] },
+  { rank: 4, name: 'demo-user/notes', type: 'notes', language: 'Markdown', commits: 42, lastActivity: 'May 15, 2025', visibility: 'Private', trend: [7, 9, 8, 12, 9, 11, 10, 8, 9, 7, 6] },
+  { rank: 5, name: 'demo-user/supabase-starter', type: 'supabase', language: 'TypeScript', commits: 38, lastActivity: 'May 14, 2025', visibility: 'Public', trend: [3, 6, 7, 10, 9, 13, 11, 15, 14, 17, 18] },
+  { rank: 6, name: 'demo-user/blog', type: 'docs', language: 'JavaScript', commits: 26, lastActivity: 'May 13, 2025', visibility: 'Public', trend: [4, 6, 7, 6, 8, 9, 10, 12, 11, 12, 10] },
+  { rank: 7, name: 'demo-user/todo-app', type: 'app', language: 'TypeScript', commits: 18, lastActivity: 'May 12, 2025', visibility: 'Private', trend: [10, 12, 13, 11, 8, 7, 9, 8, 7, 6, 7] },
+  { rank: 8, name: 'demo-user/api-client', type: 'app', language: 'Python', commits: 15, lastActivity: 'May 11, 2025', visibility: 'Private', trend: [3, 5, 8, 10, 11, 12, 9, 10, 8, 7, 6] }
 ];
 
 export const syncHistory = [
@@ -192,12 +192,12 @@ export const syncHistory = [
 ];
 
 export const suggestedPrompts = [
-  'Which repo had the most commits this month?',
-  'Show my top coding languages by commits',
-  'What was my longest streak of commits?',
-  'Who do I collaborate with the most?',
-  'Summarize my activity over the last 3 months',
-  'Which issues do I resolve the most?'
+  'Which repository had the most commits?',
+  'Summarize my GitHub activity this week.',
+  'Which repositories have been active recently?',
+  'What was my most active coding day?',
+  'How many commits were imported in the latest sync?',
+  'Which repos have the lowest activity?'
 ];
 
 export const languageBreakdown = [
@@ -215,7 +215,7 @@ export const integrationCards = [
     description: 'Connect your GitHub account to sync repositories, commits, and activity data.',
     status: 'Connected',
     details: [
-      ['Connected as', 'alexjohnson'],
+      ['Connected as', 'demo-user'],
       ['Last synced', 'May 19, 2025 09:12 AM']
     ]
   },

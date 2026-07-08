@@ -100,6 +100,9 @@ function TopRepos({ dashboardData, isLoading, dataMessage, notify }) {
             className="icon-button small"
             type="button"
             aria-label={`Repository actions for ${repo.name}`}
+            aria-haspopup="menu"
+            aria-expanded={openMenuId === repo.id}
+            title={`Repository actions for ${repo.name}`}
             onClick={() => setOpenMenuId((current) => (current === repo.id ? '' : repo.id))}
           >
             <MoreVertical size={16} aria-hidden="true" />
@@ -145,8 +148,12 @@ function TopRepos({ dashboardData, isLoading, dataMessage, notify }) {
 
   async function handleCopyRepo(repo) {
     setOpenMenuId('');
-    await navigator.clipboard.writeText(repo.name);
-    notify?.('Repository name copied to clipboard.', 'success', 'Copied');
+    try {
+      await navigator.clipboard.writeText(repo.name);
+      notify?.('Repository name copied to clipboard.', 'success', 'Copied');
+    } catch {
+      notify?.('Clipboard access was unavailable in this browser.', 'warning', 'Copy unavailable');
+    }
   }
 
   return (

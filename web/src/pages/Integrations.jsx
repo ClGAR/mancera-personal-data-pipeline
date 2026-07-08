@@ -13,6 +13,8 @@ const integrationIcons = {
   slack: Slack
 };
 
+const configurableIntegrationTypes = new Set(['github', 'supabase', 'webhook', 'ai']);
+
 function Integrations({ dashboardData, auth }) {
   const integrationCards = dashboardData?.integrations?.cards || [];
   const [activeIntegration, setActiveIntegration] = useState(null);
@@ -24,6 +26,7 @@ function Integrations({ dashboardData, auth }) {
         {integrationCards.map((integration) => {
           const Icon = integrationIcons[integration.type] || Zap;
           const connected = integration.status === 'Connected';
+          const configurable = configurableIntegrationTypes.has(integration.type);
 
           return (
             <article className="card integration-service-card" key={integration.title}>
@@ -51,7 +54,7 @@ function Integrations({ dashboardData, auth }) {
               </dl>
 
               <button className="outline-button configure-button" type="button" onClick={() => setActiveIntegration(integration)}>
-                Configure
+                {configurable ? 'Configure' : 'View setup notes'}
               </button>
             </article>
           );

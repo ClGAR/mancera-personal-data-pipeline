@@ -7,7 +7,7 @@ import Settings from './pages/Settings.jsx';
 import SyncHistory from './pages/SyncHistory.jsx';
 import TopRepos from './pages/TopRepos.jsx';
 import WeeklyStats from './pages/WeeklyStats.jsx';
-import { getCurrentUser, getHealth, getSyncHistory, getTopRepos, getWeeklyStats, logout, runManualSync } from './api.js';
+import { getCurrentUser, getHealth, getSyncHistory, getTopRepos, getWeeklyStats, loginWithGitHub, logout, runManualSync } from './api.js';
 import { buildDashboardData, getInitialDashboardData } from './data/dashboardData.js';
 import { pageMeta } from './data/mockData.js';
 
@@ -45,6 +45,10 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const ActivePage = pages[activePage] || Overview;
   const meta = useMemo(() => pageMeta[activePage] || pageMeta.overview, [activePage]);
+  const dataMode = useMemo(
+    () => getDataMode({ loading: dataState.loading, authenticated: auth.authenticated, dashboardData }),
+    [auth.authenticated, dashboardData, dataState.loading]
+  );
 
   const notify = useCallback((message, type = 'info', title = '') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -129,6 +133,10 @@ function App() {
 
   async function handleRunSync() {
     if (syncing) return null;
+    if (!auth.authenticated) {
+      notify('Connect GitHub before running a sync.', 'warning', 'GitHub required');
+      return null;
+    }
 
     setSyncing(true);
     notify('Sync started. This can take a moment while GitHub data is imported.', 'info', 'Sync started');
@@ -154,7 +162,16 @@ function App() {
       return;
     }
 
+    if (!auth.authenticated) {
+      loginWithGitHub();
+      return;
+    }
+
     await handleRunSync();
+  }
+
+  function handleConnectGitHub() {
+    loginWithGitHub();
   }
 
   async function handleLogout() {
@@ -209,7 +226,9 @@ function App() {
       syncing={syncing}
       auth={auth}
       syncHistory={dashboardData.sync?.history || []}
+      dataMode={dataMode}
       onLogout={handleLogout}
+      onConnectGitHub={handleConnectGitHub}
       toasts={toasts}
       onDismissToast={dismissToast}
     >
@@ -221,6 +240,7 @@ function App() {
         auth={auth}
         syncing={syncing}
         onRunSync={handleRunSync}
+        onConnectGitHub={handleConnectGitHub}
         onExportData={handleExportData}
         onClearLocalCache={handleClearLocalCache}
         notify={notify}
@@ -277,15 +297,41 @@ function normalizeAuth(payload) {
 function buildDataMessage({ rejected, usingMockData, authenticated }) {
   if (rejected.length > 0) {
     return authenticated
-      ? 'Some live dashboard data could not load, so polished sample data is filling the gaps.'
-      : 'Connect GitHub to load live dashboard data. Sample data is showing for now.';
+      ? 'Some live dashboard data could not load. Demo data shown until live data loads.'
+      : 'Connect GitHub to load live dashboard data. Demo data is showing for now.';
   }
 
   if (usingMockData) {
-    return 'No live dashboard rows yet. Sample data will be replaced after your first successful sync.';
+    return 'Demo data shown until live data loads. It will be replaced after your first successful sync.';
   }
 
   return '';
+}
+
+function getDataMode({ loading, authenticated, dashboardData }) {
+  if (loading) {
+    return {
+      label: 'Loading live data...',
+      tone: 'loading',
+      title: 'The dashboard is fetching the latest backend data.'
+    };
+  }
+
+  if (authenticated && !dashboardData?.usingMockData) {
+    return {
+      label: 'Live GitHub data',
+      tone: 'live',
+      title: 'This dashboard is using synced GitHub data from the backend.'
+    };
+  }
+
+  return {
+    label: 'Demo data',
+    tone: 'demo',
+    title: authenticated
+      ? 'Some sections are using demo fallback data until live rows are available.'
+      : 'Connect GitHub to replace demo data with live synced activity.'
+  };
 }
 
 function buildSyncSuccessMessage(result) {

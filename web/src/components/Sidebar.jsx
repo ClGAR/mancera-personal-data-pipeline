@@ -1,6 +1,5 @@
 import {
   BarChart3,
-  ChevronUp,
   Code2,
   Database,
   GitBranch,
@@ -79,7 +78,6 @@ function Sidebar({ activePage, onNavigate, auth }) {
             <p>{username}</p>
             <span>{auth?.authenticated ? 'GitHub Connected' : 'Not Connected'}</span>
           </div>
-          <ChevronUp size={17} aria-hidden="true" />
         </div>
       </div>
     </aside>

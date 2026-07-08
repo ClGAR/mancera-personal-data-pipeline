@@ -278,7 +278,7 @@ function buildSyncData(apiRuns, syncError = '') {
       history: mockSyncHistory,
       overviewJobs: mockOverviewSyncJobs,
       errorMessage: syncError,
-      emptyMessage: syncError ? '' : 'No real sync history found yet. Showing sample sync runs until the first sync is recorded.'
+      emptyMessage: syncError ? '' : 'No real sync history found yet. Demo sync runs are shown until the first sync is recorded.'
     };
   }
 

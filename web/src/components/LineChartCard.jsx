@@ -1,4 +1,4 @@
-import { ChevronDown, Info } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 function LineChartCard({
   title,
@@ -36,7 +36,6 @@ function LineChartCard({
         <div>
           <h2>
             {title}
-            <Info size={15} aria-hidden="true" />
           </h2>
           <span className="legend-dot">Commits</span>
         </div>

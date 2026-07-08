@@ -10,7 +10,9 @@ function Layout({
   syncing,
   auth,
   syncHistory,
+  dataMode,
   onLogout,
+  onConnectGitHub,
   toasts,
   onDismissToast,
   children
@@ -25,8 +27,10 @@ function Layout({
           syncing={syncing}
           auth={auth}
           syncHistory={syncHistory}
+          dataMode={dataMode}
           onNavigate={onNavigate}
           onLogout={onLogout}
+          onConnectGitHub={onConnectGitHub}
         />
         {children}
       </main>
