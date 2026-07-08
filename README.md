@@ -1,77 +1,179 @@
 # Personal Data Pipeline
 
-Personal Data Pipeline is a portfolio-ready full-stack app that connects a user's GitHub account, syncs repository and commit activity, stores analytics in Supabase/Postgres, triggers optional n8n workflows, and lets the user ask an AI chatbot questions grounded in their own GitHub data.
+## Overview
 
-## Why this is strong for interviews
+Personal Data Pipeline is a full-stack developer analytics app that connects to GitHub, syncs repository and commit activity, stores the data in Supabase/Postgres, and displays the results in a modern React dashboard.
 
-This project demonstrates practical junior-dev skills with senior-level polish: OAuth login, REST API design, third-party API integration, relational modeling, scheduled jobs, webhook automation, AI prompt grounding, and a clean React dashboard. It is also intentionally built so the UI looks good immediately with mock data while the backend can be configured step by step.
+The app also includes a local AI chatbot powered by Ollama. The chatbot answers questions about the user's own synced GitHub data, such as top repositories, recent commit activity, sync status, and weekly development patterns.
 
-## Tech stack
+## Why I built this
 
-- Node.js and Express
-- Passport.js GitHub OAuth2
-- Supabase JS client with Postgres
-- Axios for GitHub and webhook calls
-- node-cron for hourly sync jobs
-- Ollama local AI for free chatbot answers
-- Optional Anthropic SDK/API support for hosted chatbot answers
+I built this project to demonstrate practical full-stack development skills in a realistic product-style application. It combines authentication, data syncing, database modeling, automation, analytics, and AI integration into one connected workflow.
+
+This project demonstrates:
+
+- OAuth authentication
+- REST API design
+- Third-party API integration
+- Database design
+- Supabase/Postgres
+- Scheduled background jobs
+- Webhook automation
+- Local AI chatbot integration
+- Frontend dashboard design
+
+## Tech Stack
+
+### Frontend
+
+- React
+- Vite
+- CSS
+- lucide-react
+
+### Backend
+
+- Node.js
+- Express
+- Passport.js GitHub OAuth
+- Supabase JS
+- Axios
+- node-cron
+- Ollama local AI
+
+### Database
+
+- Supabase/Postgres
+- Row Level Security examples
+
+### Automation
+
 - n8n webhook integration
-- React and Vite
-- Plain CSS
 
 ## Features
 
-- GitHub OAuth routes for login, callback, current user, and logout
-- GitHub repository and commit sync through the REST API
-- Supabase schema for profiles, GitHub accounts, repositories, commits, and sync runs
-- Hourly cron job that syncs stored GitHub accounts
-- Optional n8n webhook call after sync completion
-- AI chatbot endpoint that uses Supabase stats as grounding context
-- Mock-first SaaS dashboard with KPI cards, chart, repo table, sync jobs, integrations, and chatbot panel
-- Safe placeholder behavior when credentials are missing
+- GitHub OAuth login
+- GitHub repository and commit sync
+- Live dashboard stats
+- Weekly commit analytics
+- Top repositories table
+- Real sync history logs
+- Manual sync button
+- Hourly cron sync
+- Optional n8n webhook notification
+- Local AI chatbot using Ollama
+- Supabase fallback answers if AI is unavailable
+- Clean modern dashboard UI
 
-## Folder structure
+## Screenshots
+
+### Overview Dashboard
+
+![Overview Dashboard](docs/screenshots/overview.png)
+
+### Weekly Stats
+
+![Weekly Stats](docs/screenshots/weekly-stats.png)
+
+### Top Repositories
+
+![Top Repositories](docs/screenshots/top-repositories.png)
+
+### Sync History
+
+![Sync History](docs/screenshots/sync-history.png)
+
+### Chatbot
+
+![Chatbot](docs/screenshots/chatbot.png)
+
+### Integrations
+
+![Integrations](docs/screenshots/integrations.png)
+
+### Settings
+
+![Settings](docs/screenshots/settings.png)
+
+## Folder Structure
 
 ```text
 .
-├── package.json
-├── README.md
-├── .gitignore
-├── server
-│   ├── package.json
-│   └── src
-│       ├── index.js
-│       ├── app.js
-│       ├── config
-│       ├── routes
-│       ├── services
-│       ├── middleware
-│       ├── jobs
-│       └── db
-└── web
-    ├── package.json
-    ├── index.html
-    └── src
-        ├── main.jsx
-        ├── App.jsx
-        ├── api.js
-        ├── styles.css
-        └── components
+|-- server/
+|   |-- src/
+|   |   |-- routes/       Express route handlers
+|   |   |-- services/     GitHub, Supabase, sync, chatbot, and webhook logic
+|   |   |-- db/           Supabase schema and RLS SQL files
+|   |   |-- config/       Environment, Passport, and Supabase setup
+|   |   |-- middleware/   Auth and error handling middleware
+|   |   `-- jobs/         Scheduled sync jobs
+|   `-- package.json
+|-- web/
+|   |-- src/
+|   |   |-- pages/        Dashboard pages
+|   |   |-- components/   Reusable UI components
+|   |   |-- data/         Data shaping and mock fallback data
+|   |   `-- api.js        Frontend API client
+|   `-- package.json
+|-- package.json
+`-- README.md
 ```
 
-## Setup
+Key folders:
+
+- `server/` contains the Express API, GitHub OAuth flow, Supabase integration, sync jobs, and AI chatbot backend.
+- `web/` contains the React/Vite dashboard.
+- `server/src/routes` defines API endpoints.
+- `server/src/services` contains business logic for syncing, analytics, webhooks, and chatbot responses.
+- `server/src/db` contains the Supabase schema and Row Level Security examples.
+- `web/src/pages` contains the main dashboard screens.
+- `web/src/components` contains shared UI components.
+
+## Environment Variables
+
+Real secrets must be stored in:
+
+```text
+server/.env
+```
+
+Do not place backend secrets in `web/.env` or commit them to Git.
+
+Expected `server/.env` variables:
+
+```env
+NODE_ENV=
+PORT=
+CLIENT_URL=
+SESSION_SECRET=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GITHUB_CALLBACK_URL=
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+AI_PROVIDER=
+OLLAMA_BASE_URL=
+OLLAMA_MODEL=
+N8N_WEBHOOK_URL=
+```
+
+`N8N_WEBHOOK_URL` is optional and non-blocking. Sync still works if the webhook is not configured.
+
+Anthropic support may still exist as an optional or legacy provider, but the current free local setup uses Ollama:
+
+```env
+AI_PROVIDER=ollama
+```
+
+## Local Setup
+
+Install dependencies from the root:
 
 ```bash
 npm install
 npm run install:all
-npm run dev
 ```
-
-The web app runs on Vite at `http://localhost:5173`. The API runs at `http://localhost:4000`.
-
-The app will start without real credentials. In that mode, the backend returns demo responses and setup guidance instead of crashing.
-
-## Connecting the frontend to the backend
 
 Start the backend:
 
@@ -80,162 +182,135 @@ cd server
 npm run dev
 ```
 
-Start the frontend in a separate terminal:
+Start the frontend in a second terminal:
 
 ```bash
 cd web
 npm run dev
 ```
 
-The frontend uses `http://localhost:4000` by default. You can optionally create `web/.env` with:
+Backend:
 
-```bash
-VITE_API_BASE_URL=http://localhost:4000
+```text
+http://localhost:4000
 ```
 
-All authenticated frontend requests are sent to the Express API with cookies included. Do not put Supabase service keys or other backend secrets in `web/.env`.
+Frontend:
 
-## Environment variables
+```text
+http://localhost:5173
+```
 
-Create a `server/.env` file manually and add the required backend environment variables. The backend always loads environment variables from `server/.env`, even if you run commands from the project root.
+## GitHub OAuth Setup
 
-Required backend variables for the free local Ollama setup:
+1. Create a GitHub OAuth App in GitHub Developer Settings.
+2. Set the Homepage URL:
 
-- `NODE_ENV`
-- `PORT`
-- `CLIENT_URL`
-- `SESSION_SECRET`
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
-- `GITHUB_CALLBACK_URL`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `AI_PROVIDER`
-- `OLLAMA_BASE_URL`
-- `OLLAMA_MODEL`
+```text
+http://localhost:5173
+```
 
-Optional backend variables:
+3. Set the callback URL:
 
-- `ANTHROPIC_API_KEY`
-- `ANTHROPIC_MODEL`
-- `N8N_WEBHOOK_URL`
+```text
+http://localhost:4000/auth/github/callback
+```
 
-Never commit `.env` or any real secrets.
+4. Add the GitHub client ID and client secret to `server/.env`.
+5. Start the backend and frontend.
+6. Log in through the dashboard or visit:
 
-## Supabase setup
+```text
+http://localhost:4000/auth/github
+```
+
+## Supabase Setup
 
 1. Create a Supabase project.
-2. Open the SQL editor.
-3. Run `server/src/db/schema.sql`.
-4. Review `server/src/db/rls.sql`.
-5. Enable RLS policies only after you decide how frontend users map to Supabase Auth or trusted JWT claims.
-6. Add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to `server/.env`.
+2. Open the Supabase SQL editor.
+3. Run:
 
-The Express server uses the service role key only on the backend. Do not expose it in React.
+```text
+server/src/db/schema.sql
+```
 
-## Ollama setup
+4. Review and run the RLS examples if needed:
 
-Ollama is the default free AI provider for local development.
+```text
+server/src/db/rls.sql
+```
 
-1. Install Ollama from `https://ollama.com`.
+5. Add the Supabase project URL, anon key, and service role key to `server/.env`.
+
+The Express backend uses the service role key server-side only. It should never be exposed to the frontend.
+
+## Ollama Setup
+
+Ollama powers the local AI chatbot for the free development setup.
+
+1. Install Ollama.
 2. Pull the local model:
 
 ```bash
 ollama pull llama3.2
 ```
 
-3. Start Ollama. The desktop app usually starts the local server automatically. From a terminal, you can also run:
+3. Confirm Ollama is running:
 
-```bash
-ollama serve
+```text
+http://127.0.0.1:11434
 ```
 
-4. Add these values to `server/.env`:
+4. Add this to `server/.env`:
 
-```bash
+```env
 AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=llama3.2
 ```
 
-The chatbot calls `POST /api/chat` on your local Ollama server and falls back to synced Supabase/GitHub data if Ollama is not running or the selected model is unavailable.
+The chatbot calls the local Ollama API and falls back to Supabase-based answers if the AI model is unavailable.
 
-## Optional Anthropic setup
+## API Endpoints
 
-Anthropic is not required for the free local setup. To use it later, set:
-
-```bash
-AI_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your_anthropic_api_key
-ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+```text
+GET  /health
+GET  /auth/github
+GET  /auth/github/callback
+GET  /auth/me
+POST /auth/logout
+POST /stats/sync
+GET  /stats/weekly
+GET  /stats/top-repos
+GET  /stats/sync-history
+POST /chatbot/ask
 ```
 
-## GitHub OAuth setup
-
-1. Go to GitHub Developer settings.
-2. Create a new OAuth App.
-3. Set Homepage URL to `http://localhost:5173`.
-4. Set Authorization callback URL to `http://localhost:4000/auth/github/callback`.
-5. Add the client ID and secret to `server/.env`.
-6. Visit `http://localhost:4000/auth/github` or use the Connect GitHub button in the dashboard.
-
-The OAuth scope is `read:user repo` so the sync service can read the authenticated user's repositories and commits.
-
-## n8n webhook setup
-
-1. Create an n8n workflow with a Webhook trigger.
-2. Copy the production webhook URL.
-3. Add it to `server/.env` as `N8N_WEBHOOK_URL`.
-4. Run a sync. The backend posts user id, sync status, repos synced, commits synced, and timestamp.
-
-If no webhook URL is configured, sync still succeeds and reports that webhook delivery was skipped.
-
-## API endpoints
-
-### Health
-
-- `GET /health`
-
-### Auth
-
-- `GET /auth/github`
-- `GET /auth/github/callback`
-- `GET /auth/me`
-- `POST /auth/logout`
-
-### Stats
-
-- `GET /stats/weekly`
-- `GET /stats/top-repos`
-- `GET /stats/sync-history`
-- `POST /stats/sync`
-
-`GET /stats/sync-history` returns the authenticated user's latest 50 Supabase `sync_runs` records in frontend-ready shape. It powers the Sync History page and the Overview Sync Jobs card.
-
-### Sync
-
-- `POST /sync/now`
-- `GET /sync/runs`
-
-### Chatbot
-
-- `POST /chatbot/ask`
-
-Example chatbot body:
+Example chatbot request body:
 
 ```json
 {
-  "question": "What repository did I work on the most this week?"
+  "question": "Which repository had the most commits this month?"
 }
 ```
 
+## Security Notes
+
+- Never commit `server/.env`.
+- OAuth tokens should be encrypted before production use.
+- The Supabase service role key must stay backend-only.
+- The n8n webhook URL should be treated as sensitive.
+- Rotate exposed local development keys before making the repository public.
+- This project includes security-minded structure and RLS examples, but it is not claiming production-ready security yet.
+
 ## Roadmap
 
-- Add API and component tests
+- Add tests
 - Add GitHub Actions CI
-- Add Docker and docker-compose
-- Add GitHub webhooks for push-triggered sync
-- Encrypt stored GitHub tokens
-- Move sync work to a BullMQ queue
-- Deploy the web app and API
+- Dockerize app
+- Deploy frontend and backend
+- Replace polling with GitHub webhooks
+- Add BullMQ queue for retries
+- Encrypt stored OAuth tokens
+- Improve RLS policies
+- Add more advanced AI summaries
