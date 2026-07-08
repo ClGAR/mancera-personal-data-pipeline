@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { answerGitHubQuestion } from '../services/chatbot.service.js';
+import { answerChatbotQuestion } from '../services/chatbot.service.js';
 
 const router = Router();
 
@@ -14,7 +14,8 @@ router.post('/ask', requireAuth, async (req, res, next) => {
       });
     }
 
-    const answer = await answerGitHubQuestion(req.user, question);
+    const mode = String(req.body?.mode || 'auto').trim().toLowerCase();
+    const answer = await answerChatbotQuestion(req.user, question, mode);
     return res.json(answer);
   } catch (error) {
     next(error);

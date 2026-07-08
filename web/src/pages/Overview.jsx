@@ -15,6 +15,12 @@ const integrationIcons = {
   webhook: Plug,
   ai: Bot
 };
+const AUTO_MODE = 'auto';
+const miniQuickPrompts = [
+  { label: 'Top repo', prompt: 'Which repository had the most commits?' },
+  { label: 'This week summary', prompt: 'Summarize my GitHub activity this week' },
+  { label: 'Latest sync', prompt: 'What happened in my latest sync?' }
+];
 
 function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify }) {
   const weekly = dashboardData?.weekly;
@@ -23,12 +29,11 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
   const integrations = dashboardData?.integrations;
   const overviewActivity = weekly?.overviewActivity || [];
   const overviewRepos = topRepos?.overviewRepos || [];
-  const leadingRepo = overviewRepos[0];
   const chartMax = getChartMax(overviewActivity, 10);
   const [chatInput, setChatInput] = useState('');
   const [chatAsking, setChatAsking] = useState(false);
   const [feedback, setFeedback] = useState({});
-  const [miniMessages, setMiniMessages] = useState(() => buildMiniStarter(leadingRepo));
+  const [miniMessages, setMiniMessages] = useState([]);
 
   const repoColumns = [
     {
@@ -50,9 +55,8 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
     }
   ];
 
-  async function sendMiniQuestion(event) {
-    event.preventDefault();
-    const question = chatInput.trim();
+  async function submitMiniQuestion(questionText) {
+    const question = questionText.trim();
     if (!question || chatAsking) return;
 
     const requestId = Date.now();
@@ -61,16 +65,24 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
     setChatAsking(true);
     setMiniMessages((current) => [
       ...current,
-      { id: `mini-user-${requestId}`, role: 'user', content: question, time },
-      { id: `mini-ai-${requestId}`, role: 'ai', content: 'Thinking through your synced GitHub data...', time, loading: true }
+      { id: `mini-user-${requestId}`, role: 'user', content: question, time, requestedMode: AUTO_MODE },
+      { id: `mini-ai-${requestId}`, role: 'ai', content: 'Thinking through your question...', time, requestedMode: AUTO_MODE, loading: true }
     ]);
 
     try {
-      const result = await askChatbot(question);
+      const result = await askChatbot(question, AUTO_MODE);
       setMiniMessages((current) =>
         current.map((message) =>
           message.id === `mini-ai-${requestId}`
-            ? { ...message, content: result?.answer || 'No answer text was returned.', loading: false, source: result?.source }
+            ? {
+                ...message,
+                content: result?.answer || 'No answer text was returned.',
+                loading: false,
+                mode: result?.mode,
+                source: result?.source,
+                usedLiveData: result?.usedLiveData,
+                warning: result?.warning
+              }
             : message
         )
       );
@@ -89,6 +101,11 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
     } finally {
       setChatAsking(false);
     }
+  }
+
+  function sendMiniQuestion(event) {
+    event.preventDefault();
+    submitMiniQuestion(chatInput);
   }
 
   async function copyMessage(message) {
@@ -218,85 +235,88 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
           <div className="card-header">
             <h2>
               <Bot size={20} aria-hidden="true" />
-              Ask your GitHub data
+              Ask the AI Assistant
             </h2>
-            <button className="outline-button" type="button" onClick={() => setMiniMessages(buildMiniStarter(leadingRepo))}>
+            <button
+              className="outline-button"
+              type="button"
+              onClick={() => {
+                setMiniMessages([]);
+                setFeedback({});
+              }}
+            >
               New Chat
             </button>
           </div>
 
           <div className="chat-thread compact-chat">
-            {miniMessages.map((message) => (
-              <div className={`message-row ${message.role === 'user' ? 'user-message' : 'assistant-message'}`} key={message.id}>
-                {message.role === 'ai' ? <span className="ai-avatar">AI</span> : null}
-                <div className="message-stack">
-                  <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
-                    <p>{message.content}</p>
-                    <span>{message.time}</span>
-                  </div>
-                  {message.role === 'ai' ? (
-                    <div className="feedback-actions">
-                      <button type="button" aria-label="Copy response" onClick={() => copyMessage(message)}>
-                        <Copy size={16} aria-hidden="true" />
-                      </button>
-                      <button
-                        className={feedback[message.id] === 'up' ? 'active-feedback' : ''}
-                        type="button"
-                        aria-label="Like response"
-                        onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'up' ? '' : 'up' }))}
-                      >
-                        <ThumbsUp size={16} aria-hidden="true" />
-                      </button>
-                      <button
-                        className={feedback[message.id] === 'down' ? 'active-feedback' : ''}
-                        type="button"
-                        aria-label="Dislike response"
-                        onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'down' ? '' : 'down' }))}
-                      >
-                        <ThumbsDown size={16} aria-hidden="true" />
-                      </button>
+            {miniMessages.length ? (
+              miniMessages.map((message) => (
+                <div className={`message-row ${message.role === 'user' ? 'user-message' : 'assistant-message'}`} key={message.id}>
+                  {message.role === 'ai' ? <span className="ai-avatar">AI</span> : null}
+                  <div className="message-stack">
+                    <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
+                      <p>{message.content}</p>
+                      {message.role === 'ai' && !message.loading ? <MiniSourceBadge message={message} /> : null}
+                      {message.warning ? <em className="message-warning">{message.warning}</em> : null}
+                      <span>{message.time}</span>
                     </div>
-                  ) : null}
+                    {message.role === 'ai' ? (
+                      <div className="feedback-actions">
+                        <button type="button" aria-label="Copy response" onClick={() => copyMessage(message)}>
+                          <Copy size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          className={feedback[message.id] === 'up' ? 'active-feedback' : ''}
+                          type="button"
+                          aria-label="Like response"
+                          onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'up' ? '' : 'up' }))}
+                        >
+                          <ThumbsUp size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          className={feedback[message.id] === 'down' ? 'active-feedback' : ''}
+                          type="button"
+                          aria-label="Dislike response"
+                          onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'down' ? '' : 'down' }))}
+                        >
+                          <ThumbsDown size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="mini-chat-welcome">
+                <strong>Ask a quick question</strong>
+                <div className="mini-prompt-row" aria-label="Quick AI prompts">
+                  {miniQuickPrompts.map((item) => (
+                    <button type="button" key={item.label} onClick={() => submitMiniQuestion(item.prompt)} disabled={chatAsking}>
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
 
           <form className="chat-form" onSubmit={sendMiniQuestion}>
             <input
               value={chatInput}
               onChange={(event) => setChatInput(event.target.value)}
-              placeholder="Ask anything about your GitHub data..."
-              aria-label="Ask anything about your GitHub data"
+              placeholder="Ask a quick question about your GitHub activity or this project."
+              aria-label="Ask a quick AI question"
             />
             <button className="primary-icon-button" type="submit" disabled={chatAsking} aria-label="Send question">
               <Send size={18} aria-hidden="true" />
             </button>
           </form>
-          <p className="chat-disclaimer">Answers are grounded in your synced repositories, commits, and sync history.</p>
+          <p className="chat-disclaimer">AI automatically uses your synced GitHub data when relevant, or answers general questions with your local Ollama model.</p>
         </article>
       </section>
     </>
   );
-}
-
-function buildMiniStarter(repo) {
-  return [
-    {
-      id: 'mini-starter-user',
-      role: 'user',
-      content: 'Which repo had the most commits this month?',
-      time: '09:15 AM'
-    },
-    {
-      id: 'mini-starter-ai',
-      role: 'ai',
-      content: repo
-        ? `Your repository "${repo.name}" is leading activity with ${repo.commits} commits.`
-        : 'Your connected repository insights will appear here after the first sync.',
-      time: '09:15 AM'
-    }
-  ];
 }
 
 function getTimeLabel() {
@@ -319,3 +339,27 @@ function getStatusVariant(status) {
 }
 
 export default Overview;
+
+function MiniSourceBadge({ message }) {
+  if (message.source === 'supabase-fallback') {
+    return <span className="source-badge source-fallback">Synced Data Fallback</span>;
+  }
+
+  if (message.requestedMode === 'auto' && message.mode === 'github') {
+    return <span className="source-badge source-github">Auto-selected GitHub Data</span>;
+  }
+
+  if (message.requestedMode === 'auto' && message.mode === 'general') {
+    return <span className="source-badge source-general">Auto-selected General AI</span>;
+  }
+
+  if (message.mode === 'github') {
+    return <span className="source-badge source-github">GitHub Data</span>;
+  }
+
+  if (message.mode === 'general') {
+    return <span className="source-badge source-general">General AI</span>;
+  }
+
+  return null;
+}

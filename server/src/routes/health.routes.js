@@ -9,6 +9,7 @@ router.get('/', (req, res) => {
     service: 'personal-data-pipeline-api',
     aiProvider: env.aiProvider,
     ollama: flags.hasOllama,
+    ollamaModel: env.ollama.model || null,
     ai: {
       provider: env.aiProvider,
       ollamaConfigured: flags.hasOllama,

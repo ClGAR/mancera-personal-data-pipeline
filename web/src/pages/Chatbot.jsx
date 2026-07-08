@@ -1,42 +1,63 @@
-import { ArrowRight, Calendar, ChevronRight, Code2, Copy, Flame, Lightbulb, Send, Sparkles, Star, ThumbsDown, ThumbsUp, TrendingUp, Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Calendar, Code2, Copy, Lightbulb, Send, Sparkles, Star, ThumbsDown, ThumbsUp, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { askChatbot } from '../api.js';
-import EmptyState from '../components/EmptyState.jsx';
-import { suggestedPrompts } from '../data/mockData.js';
 
-const promptIcons = [TrendingUp, Code2, Flame, Users, Calendar, Star, Sparkles, Lightbulb];
-const extraPrompts = [
-  'Which repositories have been active recently?',
-  'How many commits were imported in the latest sync?',
-  'Did any sync runs fail recently?',
-  'Which repos have the lowest activity?'
+const AUTO_MODE = 'auto';
+const CHAT_HISTORY_KEY = 'pdp:ai-assistant-history';
+const assistantHelperText = 'AI automatically uses your synced GitHub data when relevant, or answers general questions with your local Ollama model.';
+const starterPrompts = [
+  {
+    label: 'GitHub data',
+    prompt: 'Summarize my GitHub activity this week',
+    Icon: TrendingUp
+  },
+  {
+    label: 'GitHub data',
+    prompt: 'Which repository had the most commits?',
+    Icon: Calendar
+  },
+  {
+    label: 'General AI',
+    prompt: 'Explain OAuth 2.0 simply',
+    Icon: Code2
+  },
+  {
+    label: 'General AI',
+    prompt: 'Help me improve this portfolio project',
+    Icon: Sparkles
+  },
+  {
+    label: 'General AI',
+    prompt: 'What should I build next as a junior developer?',
+    Icon: Star
+  },
+  {
+    label: 'General AI',
+    prompt: 'Explain Supabase RLS',
+    Icon: Lightbulb
+  }
 ];
-const emptyRepositories = [];
 
-function Chatbot({ dashboardData, notify, chatResetNonce }) {
-  const repositories = dashboardData?.topRepos?.repositories ?? emptyRepositories;
-  const starterMessages = useMemo(() => buildStarterMessages(repositories), [repositories]);
+function Chatbot({ auth, notify, chatResetNonce }) {
   const [input, setInput] = useState('');
   const [asking, setAsking] = useState(false);
-  const [expandedPrompts, setExpandedPrompts] = useState(false);
   const [feedback, setFeedback] = useState({});
-  const [messages, setMessages] = useState(starterMessages);
-  const prompts = expandedPrompts ? [...suggestedPrompts, ...extraPrompts] : suggestedPrompts;
-
-  useEffect(() => {
-    setMessages((current) => {
-      const customMessages = current.filter((message) => !message.starter);
-      return customMessages.length ? [...starterMessages, ...customMessages] : starterMessages;
-    });
-  }, [starterMessages]);
+  const [messages, setMessages] = useState(readStoredMessages);
+  const greetingName = getGreetingName(auth?.user);
+  const greeting = greetingName ? `Good to see you, ${greetingName}.` : 'Good to see you.';
 
   useEffect(() => {
     if (chatResetNonce) {
+      clearStoredMessages();
       setMessages([]);
       setInput('');
       setFeedback({});
     }
   }, [chatResetNonce]);
+
+  useEffect(() => {
+    saveStoredMessages(messages);
+  }, [messages]);
 
   async function sendQuestion(question) {
     const cleanQuestion = question.trim();
@@ -50,13 +71,15 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
         id: `user-${requestId}`,
         role: 'user',
         time: timestamp,
-        content: cleanQuestion
+        content: cleanQuestion,
+        requestedMode: AUTO_MODE
       },
       {
         id: `ai-${requestId}`,
         role: 'ai',
         time: timestamp,
-        content: 'Thinking through your GitHub data...',
+        content: 'Thinking through your question...',
+        requestedMode: AUTO_MODE,
         loading: true
       }
     ]);
@@ -64,7 +87,7 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
     setAsking(true);
 
     try {
-      const result = await askChatbot(cleanQuestion);
+      const result = await askChatbot(cleanQuestion, AUTO_MODE);
       const answer = result?.answer || 'I found your data, but there was no answer text in the response.';
       setMessages((current) =>
         current.map((message) =>
@@ -72,7 +95,9 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
             ? {
                 ...message,
                 content: answer,
+                mode: result?.mode,
                 source: result?.source,
+                usedLiveData: result?.usedLiveData,
                 warning: result?.warning,
                 loading: false
               }
@@ -81,6 +106,8 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
       );
       if (result?.source === 'supabase-fallback') {
         notify?.('Ollama was unavailable, so the answer used synced Supabase data.', 'warning', 'AI fallback used');
+      } else if (result?.warning) {
+        notify?.(result.warning, 'warning', 'AI notice');
       }
     } catch (error) {
       setMessages((current) =>
@@ -116,44 +143,15 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
   }
 
   return (
-    <section className="assistant-layout">
-      <aside className="card prompt-card">
-        <div className="card-header">
-          <div>
-            <h2>
-              <Lightbulb size={20} aria-hidden="true" />
-              Suggested prompts
-            </h2>
-            <p>Try asking about your GitHub data</p>
-          </div>
-        </div>
-
-        <div className="prompt-list">
-          {prompts.map((prompt, index) => {
-            const Icon = promptIcons[index] || Sparkles;
-
-            return (
-              <button className="prompt-button" type="button" key={prompt} onClick={() => sendQuestion(prompt)} disabled={asking}>
-                <Icon size={22} aria-hidden="true" />
-                <span>{prompt}</span>
-                <ChevronRight size={17} aria-hidden="true" />
-              </button>
-            );
-          })}
-        </div>
-
-        <button className="outline-button prompt-more" type="button" onClick={() => setExpandedPrompts((current) => !current)}>
-          {expandedPrompts ? 'Show fewer examples' : 'View all examples'}
-          <ArrowRight size={15} aria-hidden="true" />
-        </button>
-      </aside>
-
+    <section className="assistant-layout assistant-layout-single">
       <article className="card assistant-card">
-        <div className="chat-day-divider">
-          <span>Today</span>
-        </div>
+        {messages.length ? (
+          <div className="chat-day-divider">
+            <span>Today</span>
+          </div>
+        ) : null}
 
-        <div className="assistant-thread">
+        <div className={`assistant-thread ${messages.length ? '' : 'is-empty'}`.trim()}>
           {messages.length ? (
             messages.map((message) => (
               <div className={`message-row ${message.role === 'user' ? 'user-message' : 'assistant-message'}`} key={message.id}>
@@ -161,6 +159,7 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
                 <div className="message-stack">
                   <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
                     <p>{message.content}</p>
+                    {message.role === 'ai' && !message.loading ? <SourceBadge message={message} /> : null}
                     {message.list ? (
                       <ul className="answer-list">
                         {message.list.map((item) => (
@@ -198,7 +197,12 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
               </div>
             ))
           ) : (
-            <EmptyState title="New chat ready" message="Choose a suggested prompt or ask a question about your synced GitHub data." />
+            <AssistantWelcome
+              greeting={greeting}
+              prompts={starterPrompts}
+              disabled={asking}
+              onPromptClick={sendQuestion}
+            />
           )}
         </div>
 
@@ -206,51 +210,75 @@ function Chatbot({ dashboardData, notify, chatResetNonce }) {
           <input
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask anything about your GitHub data..."
-            aria-label="Ask anything about your GitHub data"
+            placeholder="Ask about your GitHub data or any development question..."
+            aria-label="Ask the AI assistant"
           />
           <button className="primary-icon-button" type="submit" disabled={asking} aria-label="Send question">
             <Send size={18} aria-hidden="true" />
           </button>
         </form>
-        <p className="chat-disclaimer">Answers are grounded in your synced repositories, commits, and sync history.</p>
+        <p className="chat-disclaimer">{assistantHelperText}</p>
       </article>
     </section>
   );
 }
 
-function buildStarterMessages(repositories) {
-  const topRepo = repositories[0];
-  const runnerUpRepos = repositories.slice(1, 4);
-  const starterTime = '09:15 AM';
+function AssistantWelcome({ greeting, prompts, disabled, onPromptClick }) {
+  return (
+    <section className="assistant-welcome" aria-label="AI assistant welcome">
+      <div className="assistant-welcome-inner">
+        <span className="assistant-welcome-mark">
+          <Sparkles size={24} aria-hidden="true" />
+        </span>
+        <h2>{greeting}</h2>
+        <p className="assistant-welcome-subtitle">What would you like to explore today?</p>
+        <p className="assistant-welcome-helper">Ask about your synced GitHub activity, or get help with broader software development questions.</p>
 
-  return [
-    {
-      id: 'starter-user-top-repo',
-      role: 'user',
-      time: starterTime,
-      content: 'Which repo had the most commits this month?',
-      starter: true
-    },
-    {
-      id: 'starter-ai-top-repo',
-      role: 'ai',
-      time: starterTime,
-      content: topRepo
-        ? `Your repository "${topRepo.name}" is currently leading activity with ${topRepo.commits} commits.`
-        : 'Your top repository will appear here after your first successful sync.',
-      list: runnerUpRepos.length
-        ? runnerUpRepos.map((repo, index) => `${formatRank(index + 2)}: ${repo.name} - ${repo.commits} commits`)
-        : null,
-      starter: true
-    }
-  ];
+        <div className="welcome-prompt-grid" aria-label="Suggested prompts">
+          {prompts.map(({ label, prompt, Icon }) => (
+            <button className="welcome-prompt-card" type="button" key={prompt} onClick={() => onPromptClick(prompt)} disabled={disabled}>
+              <Icon size={19} aria-hidden="true" />
+              <span>
+                <em>{label}</em>
+                <strong>{prompt}</strong>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function formatRank(rank) {
-  if (rank === 2) return '2nd';
-  if (rank === 3) return '3rd';
-  return `${rank}th`;
+function SourceBadge({ message }) {
+  const badge = getSourceBadge(message);
+  if (!badge) return null;
+
+  return <span className={`source-badge source-${badge.variant}`}>{badge.label}</span>;
+}
+
+function getSourceBadge(message) {
+  if (message.source === 'supabase-fallback') {
+    return { label: 'Synced Data Fallback', variant: 'fallback' };
+  }
+
+  if (message.requestedMode === 'auto' && message.mode === 'github') {
+    return { label: 'Auto-selected GitHub Data', variant: 'github' };
+  }
+
+  if (message.requestedMode === 'auto' && message.mode === 'general') {
+    return { label: 'Auto-selected General AI', variant: 'general' };
+  }
+
+  if (message.mode === 'github') {
+    return { label: 'GitHub Data', variant: 'github' };
+  }
+
+  if (message.mode === 'general') {
+    return { label: 'General AI', variant: 'general' };
+  }
+
+  return null;
 }
 
 function getTimeLabel() {
@@ -258,6 +286,49 @@ function getTimeLabel() {
     hour: 'numeric',
     minute: '2-digit'
   });
+}
+
+function getGreetingName(user) {
+  const value = [user?.displayName, user?.username].find((item) => typeof item === 'string' && item.trim());
+  return value ? value.trim().replace(/^@/, '') : '';
+}
+
+function readStoredMessages() {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const raw = window.localStorage.getItem(CHAT_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((message) => message && !message.loading) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredMessages(messages) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const savedMessages = messages.filter((message) => !message.loading);
+    if (savedMessages.length) {
+      window.localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(savedMessages));
+      return;
+    }
+    clearStoredMessages();
+  } catch {
+    // Local chat history is a convenience, so storage failures should not block chat.
+  }
+}
+
+function clearStoredMessages() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.removeItem(CHAT_HISTORY_KEY);
+  } catch {
+    // Ignore unavailable localStorage.
+  }
 }
 
 export default Chatbot;

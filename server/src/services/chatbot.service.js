@@ -3,25 +3,42 @@ import axios from 'axios';
 import { env, flags } from '../config/env.js';
 import { getChatbotContext } from './stats.service.js';
 
+const validChatbotModes = new Set(['auto', 'github', 'general']);
+const generalAssistantPrompt =
+  'You are a helpful AI assistant inside a developer portfolio dashboard. You can answer general software development, productivity, learning, and project questions. Be practical, clear, and concise. If the user asks about their synced GitHub data, tell the system to use GitHub Data Mode instead.';
+
+export async function answerChatbotQuestion(user, question, requestedMode = 'auto') {
+  const normalizedMode = normalizeChatbotMode(requestedMode);
+  const selectedMode = normalizedMode === 'auto' ? detectChatbotMode(question) : normalizedMode;
+
+  if (selectedMode === 'general') {
+    return answerGeneralQuestion(question);
+  }
+
+  return answerGitHubQuestion(user, question);
+}
+
 export async function answerGitHubQuestion(user, question) {
   const context = await getSafeChatbotContext(user);
   const groundedPrompt = buildGroundedPrompt(question, context);
   const fallbackAnswer = buildFallbackAnswer(question, context);
 
   if (env.aiProvider === 'ollama') {
-    return answerWithOllama(groundedPrompt, fallbackAnswer, context);
+    return addGithubModeMetadata(await answerWithOllama(groundedPrompt, fallbackAnswer, context));
   }
 
   if (!flags.hasAnthropic) {
     return {
       answer: fallbackAnswer,
+      mode: 'github',
       source: 'supabase-fallback',
+      usedLiveData: true,
       warning: 'Anthropic is not configured',
       context
     };
   }
 
-  return answerWithAnthropic(groundedPrompt, fallbackAnswer, context);
+  return addGithubModeMetadata(await answerWithAnthropic(groundedPrompt, fallbackAnswer, context));
 }
 
 async function getSafeChatbotContext(user) {
@@ -91,7 +108,7 @@ async function answerWithOllama(groundedPrompt, fallbackAnswer, context) {
 
     return {
       answer: text,
-      source: 'ollama',
+      source: 'ollama-grounded',
       context
     };
   } catch (error) {
@@ -103,6 +120,64 @@ async function answerWithOllama(groundedPrompt, fallbackAnswer, context) {
       warning: 'Ollama is not running or the selected model is unavailable.',
       context
     };
+  }
+}
+
+async function answerGeneralQuestion(question) {
+  console.info('Ollama general assistant configuration.', buildOllamaLogContext());
+
+  if (!flags.hasOllama) {
+    console.warn('Ollama general assistant is not configured.', buildOllamaLogContext());
+    return buildGeneralOllamaUnavailableResponse();
+  }
+
+  try {
+    const response = await axios.post(
+      `${env.ollama.baseUrl}/api/chat`,
+      {
+        model: env.ollama.model,
+        messages: [
+          {
+            role: 'system',
+            content: generalAssistantPrompt
+          },
+          {
+            role: 'user',
+            content: question
+          }
+        ],
+        stream: false
+      },
+      {
+        timeout: 60000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.info('Ollama general assistant response received.', {
+      ...buildOllamaLogContext(),
+      ollamaResponseStatus: response.status
+    });
+
+    const text = String(response.data?.message?.content || '').trim();
+    if (!text) {
+      console.warn('Ollama general assistant response did not include message content.');
+      return {
+        ...buildGeneralOllamaUnavailableResponse(),
+        warning: 'Ollama returned an empty response.'
+      };
+    }
+
+    return {
+      answer: text,
+      mode: 'general',
+      source: 'ollama-general',
+      usedLiveData: false
+    };
+  } catch (error) {
+    logOllamaError(error, 'general');
+    return buildGeneralOllamaUnavailableResponse();
   }
 }
 
@@ -163,6 +238,58 @@ function buildGroundedPrompt(question, context) {
     '',
     'Answer in 2-4 sentences. If the question asks for a top repository, name the repository and cite its commit count.'
   ].join('\n');
+}
+
+function normalizeChatbotMode(mode) {
+  const normalized = String(mode || 'auto').trim().toLowerCase();
+  return validChatbotModes.has(normalized) ? normalized : 'auto';
+}
+
+function detectChatbotMode(question) {
+  const normalizedQuestion = String(question || '').toLowerCase();
+  const githubIntentTerms = [
+    'github activity',
+    'github data',
+    'repo',
+    'repos',
+    'repository',
+    'repositories',
+    'commit',
+    'commits',
+    'sync',
+    'synced',
+    'streak',
+    'coding activity',
+    'activity this week',
+    'weekly stats',
+    'dashboard stats',
+    'top repository',
+    'top repo',
+    'low activity',
+    'latest sync',
+    'most active coding day',
+    'imported in the latest sync'
+  ];
+
+  return githubIntentTerms.some((term) => normalizedQuestion.includes(term)) ? 'github' : 'general';
+}
+
+function addGithubModeMetadata(result) {
+  return {
+    ...result,
+    mode: 'github',
+    usedLiveData: true
+  };
+}
+
+function buildGeneralOllamaUnavailableResponse() {
+  return {
+    answer: 'The local AI model is not available right now. Please make sure Ollama is running.',
+    mode: 'general',
+    source: 'ollama-general',
+    usedLiveData: false,
+    warning: 'Ollama is not running or the selected model is unavailable.'
+  };
 }
 
 function summarizeContext(context) {
@@ -230,7 +357,7 @@ function logAnthropicError(error) {
   });
 }
 
-function logOllamaError(error) {
+function logOllamaError(error, mode = 'github') {
   const status = error.response?.status || error.status || error.statusCode || error.code || 'unknown';
   const message =
     error.response?.data?.error ||
@@ -240,6 +367,7 @@ function logOllamaError(error) {
 
   console.warn('Ollama chatbot request failed.', {
     ...buildOllamaLogContext(),
+    mode,
     ollamaResponseStatus: status,
     message: sanitizeLogMessage(message)
   });

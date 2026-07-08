@@ -4,7 +4,7 @@
 
 Personal Data Pipeline is a full-stack developer analytics app that connects to GitHub, syncs repository and commit activity, stores the data in Supabase/Postgres, and displays the results in a modern React dashboard.
 
-The app also includes a local AI chatbot powered by Ollama. The chatbot answers questions about the user's own synced GitHub data, such as top repositories, recent commit activity, sync status, and weekly development patterns.
+The app also includes a local AI Assistant powered by Ollama. It can answer grounded questions about the user's synced GitHub data, or route general software development, productivity, learning, and project questions to local Ollama.
 
 ## Why I built this
 
@@ -61,7 +61,8 @@ This project demonstrates:
 - Manual sync button
 - Hourly cron sync
 - Optional n8n webhook notification
-- Local AI chatbot using Ollama
+- Local AI Assistant using Ollama
+- Automatic routing between GitHub data answers and general AI help
 - Supabase fallback answers if AI is unavailable
 - Clean modern dashboard UI
 
@@ -73,7 +74,7 @@ The dashboard UI is wired to feel like a real app rather than a static mockup:
 - Live Sync Now action that refreshes weekly stats, top repositories, and sync history
 - Searchable and filterable repository table
 - Real sync history filters for status and date ranges
-- Functional chatbot with local Ollama answers and Supabase fallback answers
+- Functional AI Assistant with hidden Auto Mode and answer source badges
 - Integration configuration modals with honest configured, not configured, local only, and coming soon states
 - Settings interactions with session/localStorage persistence where backend endpoints do not exist yet
 - Export data action that downloads a JSON snapshot of currently loaded user, stats, repository, and sync data
@@ -85,6 +86,17 @@ Current limitations are intentionally visible in the UI:
 - Settings persistence is local or localStorage only unless backend settings endpoints are added later.
 - Email and Slack notifications are coming soon.
 - GitHub disconnect has a confirmation modal, but the backend disconnect endpoint is not implemented yet.
+
+## AI Assistant
+
+The AI Assistant uses Auto Mode by default. It detects whether a question is about synced GitHub data or a general software development topic.
+
+- The assistant opens with a personalized greeting and suggested starter prompts while Auto Mode stays behind the scenes.
+- GitHub-related questions are answered from synced Supabase/GitHub data such as repositories, commits, weekly stats, and sync history.
+- General development questions use the local Ollama model for broader help, interview prep, README writing, project ideas, and explanations.
+- Answer source badges show whether a response came from GitHub data, general Ollama AI, or synced-data fallback.
+
+Ollama is the current free local setup and does not require a paid Anthropic API key. General AI answers are not guaranteed to be grounded in the user's GitHub data unless Auto Mode detects that the question should use synced GitHub data.
 
 ## Theme Support
 
@@ -284,7 +296,7 @@ The Express backend uses the service role key server-side only. It should never 
 
 ## Ollama Setup
 
-Ollama powers the local AI chatbot for the free development setup.
+Ollama powers the local AI Assistant for the free development setup.
 
 1. Install Ollama.
 2. Pull the local model:
@@ -307,7 +319,7 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=llama3.2
 ```
 
-The chatbot calls the local Ollama API and falls back to Supabase-based answers if the AI model is unavailable.
+The AI Assistant uses Auto Mode by default. GitHub-data questions call the local Ollama API with synced Supabase data and fall back to Supabase-based answers if the AI model is unavailable. General questions call Ollama directly for broad assistant responses.
 
 ## API Endpoints
 
@@ -328,7 +340,8 @@ Example chatbot request body:
 
 ```json
 {
-  "question": "Which repository had the most commits this month?"
+  "question": "Which repository had the most commits?",
+  "mode": "auto"
 }
 ```
 

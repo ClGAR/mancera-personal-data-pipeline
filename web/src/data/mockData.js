@@ -30,8 +30,8 @@ export const pageMeta = {
     actionLabel: 'Run Manual Sync'
   },
   chatbot: {
-    title: 'GitHub Data Assistant',
-    subtitle: 'Ask questions about your GitHub activity, repositories, and coding patterns.',
+    title: 'AI Assistant',
+    subtitle: 'Ask about your GitHub activity or get help with broader development questions.',
     actionLabel: 'New Chat'
   },
   integrations: {

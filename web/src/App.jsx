@@ -158,7 +158,7 @@ function App() {
     if (meta.actionLabel === 'New Chat') {
       setChatResetNonce((current) => current + 1);
       handleNavigate('chatbot');
-      notify('Chat cleared locally for this session.', 'info', 'New chat');
+      notify('Started a new chat.', 'info', 'New chat');
       return;
     }
 

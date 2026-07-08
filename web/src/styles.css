@@ -1424,6 +1424,45 @@ td strong {
   margin-bottom: 16px;
 }
 
+.mini-chat-welcome {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  min-height: 182px;
+  padding: 18px;
+  border-radius: 14px;
+  background: var(--bg-card-soft);
+}
+
+.mini-chat-welcome strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.mini-prompt-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-prompt-row button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--card-bg);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.mini-prompt-row button:hover,
+.mini-prompt-row button:focus-visible {
+  border-color: var(--primary-border);
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
 .message-row {
   display: flex;
   min-width: 0;
@@ -2037,6 +2076,10 @@ td strong {
   grid-template-columns: 300px minmax(0, 1fr);
 }
 
+.assistant-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .prompt-card {
   min-height: 700px;
 }
@@ -2044,6 +2087,23 @@ td strong {
 .prompt-list {
   display: grid;
   gap: 14px;
+}
+
+.prompt-groups {
+  display: grid;
+  gap: 22px;
+}
+
+.prompt-group {
+  display: grid;
+  gap: 12px;
+}
+
+.prompt-group h3 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 900;
 }
 
 .prompt-button {
@@ -2103,11 +2163,145 @@ td strong {
   padding: 0 8px 22px;
 }
 
+.assistant-thread.is-empty {
+  align-content: center;
+  padding: 26px 8px 32px;
+}
+
+.assistant-welcome {
+  display: grid;
+  place-items: center;
+  min-height: 520px;
+  text-align: center;
+}
+
+.assistant-welcome-inner {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.assistant-welcome-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  border-radius: 16px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.assistant-welcome h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.assistant-welcome-subtitle {
+  margin: 14px 0 0;
+  color: var(--text-secondary);
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.assistant-welcome-helper {
+  max-width: 620px;
+  margin: 10px auto 0;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.welcome-prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 30px;
+  text-align: left;
+}
+
+.welcome-prompt-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 78px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  background: var(--bg-elevated);
+  text-align: left;
+  box-shadow: 0 10px 30px rgba(18, 24, 38, 0.05);
+}
+
+.welcome-prompt-card svg {
+  color: var(--primary);
+}
+
+.welcome-prompt-card span,
+.welcome-prompt-card em,
+.welcome-prompt-card strong {
+  display: block;
+  min-width: 0;
+}
+
+.welcome-prompt-card em {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.welcome-prompt-card strong {
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.welcome-prompt-card:hover,
+.welcome-prompt-card:focus-visible {
+  border-color: var(--primary-border);
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+}
+
 .answer-list {
   margin: 14px 0 0;
   padding-left: 22px;
   color: var(--text);
   line-height: 1.65;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.source-github {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.source-general {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.source-fallback {
+  color: var(--warning);
+  background: var(--warning-soft);
 }
 
 .language-breakdown {
@@ -2679,6 +2873,7 @@ td strong {
   .assistant-card {
     min-height: 0;
   }
+
 }
 
 @media (max-width: 900px) {
@@ -2783,6 +2978,18 @@ td strong {
   .message-bubble,
   .user-message .message-bubble {
     max-width: 100%;
+  }
+
+  .assistant-welcome {
+    min-height: 440px;
+  }
+
+  .welcome-prompt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-prompt-card {
+    min-height: 70px;
   }
 
   .language-row {

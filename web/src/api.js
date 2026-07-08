@@ -86,10 +86,10 @@ export function runManualSync() {
   });
 }
 
-export function askChatbot(question) {
+export function askChatbot(question, mode = 'auto') {
   return request('/chatbot/ask', {
     method: 'POST',
-    body: { question }
+    body: { question, mode }
   });
 }
 
