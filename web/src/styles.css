@@ -310,6 +310,7 @@ button {
 }
 
 .connected-button {
+  text-decoration: none;
   gap: 9px;
   min-height: 44px;
   padding: 0 15px;
@@ -338,8 +339,44 @@ button {
   background: var(--danger);
 }
 
+.status-dot.neutral {
+  background: var(--muted-soft);
+}
+
 .badge-neutral .badge-dot {
   background: var(--muted-soft);
+}
+
+.app-banner,
+.state-banner {
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border: 1px solid rgba(91, 63, 246, 0.18);
+  border-radius: 14px;
+  color: #3f2fb8;
+  background: var(--primary-soft);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.app-banner.success {
+  border-color: rgba(12, 168, 103, 0.2);
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.app-banner.error,
+.state-banner.error {
+  border-color: rgba(239, 68, 68, 0.18);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.state-banner.muted-banner {
+  color: var(--muted);
+  background: #f4f6fa;
+  border-color: var(--border);
 }
 
 .primary-button {
@@ -756,6 +793,10 @@ button {
   border-bottom: 0;
 }
 
+.mini-sync-row.latest-success-row {
+  background: var(--success-soft);
+}
+
 .mini-sync-row span:first-child {
   overflow: hidden;
   color: #344054;
@@ -856,6 +897,14 @@ button {
   height: 6px;
   border-radius: 999px;
   background: var(--success);
+}
+
+.integration-row.is-muted span {
+  color: var(--muted);
+}
+
+.integration-row.is-muted span i {
+  background: var(--muted-soft);
 }
 
 .table-wrap {
@@ -992,6 +1041,16 @@ td strong {
   color: var(--text);
   font-size: 0.92rem;
   line-height: 1.5;
+}
+
+.loading-bubble {
+  color: var(--muted);
+  background: #f4f6fa;
+}
+
+.error-bubble {
+  border: 1px solid rgba(239, 68, 68, 0.16);
+  background: var(--danger-soft);
 }
 
 .message-bubble span {

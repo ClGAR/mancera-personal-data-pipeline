@@ -5,13 +5,6 @@ import MiniSparkline from '../components/MiniSparkline.jsx';
 import RepoIcon from '../components/RepoIcon.jsx';
 import StatCard from '../components/StatCard.jsx';
 import Table from '../components/Table.jsx';
-import {
-  overviewActivity,
-  overviewIntegrations,
-  overviewRepos,
-  overviewStats,
-  overviewSyncJobs
-} from '../data/mockData.js';
 
 const integrationIcons = {
   supabase: Zap,
@@ -20,7 +13,15 @@ const integrationIcons = {
   ai: Bot
 };
 
-function Overview({ onNavigate }) {
+function Overview({ onNavigate, dashboardData, isLoading, dataMessage }) {
+  const weekly = dashboardData?.weekly;
+  const topRepos = dashboardData?.topRepos;
+  const sync = dashboardData?.sync;
+  const integrations = dashboardData?.integrations;
+  const overviewActivity = weekly?.overviewActivity || [];
+  const overviewRepos = topRepos?.overviewRepos || [];
+  const leadingRepo = overviewRepos[0];
+  const chartMax = getChartMax(overviewActivity, 10);
   const repoColumns = [
     {
       key: 'name',
@@ -43,8 +44,11 @@ function Overview({ onNavigate }) {
 
   return (
     <>
+      {isLoading ? <div className="state-banner">Loading your latest GitHub activity...</div> : null}
+      {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
+
       <section className="stats-grid" aria-label="Overview metrics">
-        {overviewStats.map((metric) => (
+        {(weekly?.overviewStats || []).map((metric) => (
           <StatCard key={metric.label} {...metric} />
         ))}
       </section>
@@ -53,9 +57,9 @@ function Overview({ onNavigate }) {
         <LineChartCard
           title="Weekly Commit Activity"
           data={overviewActivity}
-          controls={['Last 12 weeks']}
-          maxValue={250}
-          yTicks={[0, 50, 100, 150, 200, 250]}
+          controls={['Latest activity']}
+          maxValue={chartMax}
+          yTicks={buildTicks(chartMax)}
           className="overview-chart-card"
         />
 
@@ -75,10 +79,10 @@ function Overview({ onNavigate }) {
           </div>
 
           <div className="mini-sync-list">
-            {overviewSyncJobs.map((job) => (
-              <div className="mini-sync-row" key={job.id}>
+            {(sync?.overviewJobs || []).map((job) => (
+              <div className={`mini-sync-row ${job.isLatestSuccess ? 'latest-success-row' : ''}`} key={job.id}>
                 <span>{job.time}</span>
-                <Badge variant={job.status === 'failed' ? 'danger' : 'success'} icon>
+                <Badge variant={getStatusVariant(job.status)} icon>
                   {job.status}
                 </Badge>
                 <em>{job.duration}</em>
@@ -101,11 +105,16 @@ function Overview({ onNavigate }) {
           </div>
 
           <div className="integration-list">
-            {overviewIntegrations.map((integration) => {
+            {(integrations?.overview || []).map((integration) => {
               const Icon = integrationIcons[integration.type] || Plug;
 
               return (
-                <button className="integration-row" type="button" key={integration.name} onClick={() => onNavigate('integrations')}>
+                <button
+                  className={`integration-row ${integration.status === 'Connected' ? '' : 'is-muted'}`}
+                  type="button"
+                  key={integration.name}
+                  onClick={() => onNavigate('integrations')}
+                >
                   <span className={`integration-icon ${integration.type}`}>
                     <Icon size={19} aria-hidden="true" />
                   </span>
@@ -161,7 +170,11 @@ function Overview({ onNavigate }) {
               <span className="ai-avatar">AI</span>
               <div className="message-stack">
                 <div className="message-bubble">
-                  <p>Your repository "alexjohnson/portfolio" had the most commits this month with 48 commits.</p>
+                  <p>
+                    {leadingRepo
+                      ? `Your repository "${leadingRepo.name}" is leading activity with ${leadingRepo.commits} commits.`
+                      : 'Your connected repository insights will appear here after the first sync.'}
+                  </p>
                   <span>09:15 AM</span>
                 </div>
                 <div className="feedback-actions">
@@ -189,6 +202,21 @@ function Overview({ onNavigate }) {
       </section>
     </>
   );
+}
+
+function getChartMax(data, fallback) {
+  const max = Math.max(...data.map((item) => item.value), fallback);
+  return Math.ceil(max / 10) * 10;
+}
+
+function buildTicks(max) {
+  return [0, Math.round(max * 0.25), Math.round(max * 0.5), Math.round(max * 0.75), max];
+}
+
+function getStatusVariant(status) {
+  if (status === 'failed') return 'danger';
+  if (status === 'success') return 'success';
+  return 'neutral';
 }
 
 export default Overview;

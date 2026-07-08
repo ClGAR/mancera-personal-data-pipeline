@@ -9,9 +9,60 @@ const serverEnvPath = path.join(serverRoot, '.env');
 
 dotenv.config({ path: serverEnvPath });
 
+const n8nWebhookPlaceholderValues = new Set([
+  'your-n8n-webhook-url',
+  'your_webhook_url',
+  'https://your-n8n-webhook-url'
+]);
+const n8nWebhookPlaceholderHosts = new Set(['your-n8n-webhook-url', 'your_webhook_url']);
+const placeholderValues = new Set([
+  'your-api-key',
+  'your_api_key',
+  'your-anthropic-api-key',
+  'your_anthropic_api_key',
+  'your-anthropic-api-key-here',
+  'your_anthropic_api_key_here',
+  'your-model-name',
+  'your_model_name_here',
+  'your-ollama-model',
+  'your_ollama_model',
+  'your-ollama-url',
+  'your_ollama_url',
+  'http://your-ollama-url',
+  'https://your-ollama-url',
+  'changeme',
+  'change-me',
+  'placeholder'
+]);
+
 const optional = (value, fallback = '') => value || fallback;
+const normalizeProvider = (value) => {
+  const provider = String(value || 'ollama').trim().toLowerCase();
+  return provider === 'anthropic' ? 'anthropic' : 'ollama';
+};
+const isConfiguredValue = (value) => {
+  const trimmed = String(value || '').trim();
+  const normalized = trimmed.toLowerCase();
+  return Boolean(trimmed && !placeholderValues.has(normalized));
+};
+const isValidHttpUrl = (value, placeholderHosts = new Set()) => {
+  const trimmed = String(value || '').trim();
+  const normalized = trimmed.toLowerCase().replace(/\/+$/, '');
+  if (!trimmed || n8nWebhookPlaceholderValues.has(normalized) || placeholderValues.has(normalized)) return false;
+
+  try {
+    const url = new URL(trimmed);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      !placeholderHosts.has(url.hostname.toLowerCase())
+    );
+  } catch {
+    return false;
+  }
+};
 
 export const env = {
+  aiProvider: normalizeProvider(process.env.AI_PROVIDER),
   nodeEnv: optional(process.env.NODE_ENV, 'development'),
   port: Number(process.env.PORT || 4000),
   clientUrl: optional(process.env.CLIENT_URL, 'http://localhost:5173'),
@@ -27,11 +78,15 @@ export const env = {
     anonKey: optional(process.env.SUPABASE_ANON_KEY)
   },
   anthropic: {
-    apiKey: optional(process.env.ANTHROPIC_API_KEY),
-    model: optional(process.env.ANTHROPIC_MODEL, 'claude-3-5-sonnet-latest')
+    apiKey: optional(process.env.ANTHROPIC_API_KEY).trim(),
+    model: optional(process.env.ANTHROPIC_MODEL, 'claude-3-5-sonnet-latest').trim()
+  },
+  ollama: {
+    baseUrl: optional(process.env.OLLAMA_BASE_URL).trim().replace(/\/+$/, ''),
+    model: optional(process.env.OLLAMA_MODEL).trim()
   },
   n8n: {
-    webhookUrl: optional(process.env.N8N_WEBHOOK_URL)
+    webhookUrl: optional(process.env.N8N_WEBHOOK_URL).trim()
   },
   cron: {
     enabled: process.env.CRON_ENABLED !== 'false',
@@ -42,6 +97,10 @@ export const env = {
 export const flags = {
   hasGithubOAuth: Boolean(env.github.clientId && env.github.clientSecret),
   hasSupabase: Boolean(env.supabase.url && env.supabase.anonKey && env.supabase.serviceRoleKey),
-  hasAnthropic: Boolean(env.anthropic.apiKey),
-  hasN8nWebhook: Boolean(env.n8n.webhookUrl)
+  hasOllama:
+    env.aiProvider === 'ollama' &&
+    isValidHttpUrl(env.ollama.baseUrl, new Set(['your-ollama-url', 'your_ollama_url'])) &&
+    isConfiguredValue(env.ollama.model),
+  hasAnthropic: env.aiProvider === 'anthropic' && isConfiguredValue(env.anthropic.apiKey),
+  hasN8nWebhook: isValidHttpUrl(env.n8n.webhookUrl, n8nWebhookPlaceholderHosts)
 };

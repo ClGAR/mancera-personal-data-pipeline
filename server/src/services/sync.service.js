@@ -29,9 +29,13 @@ export async function syncUserGitHubActivity(user) {
       commitsSynced: result.commitsSynced,
       syncedAt: new Date().toISOString()
     });
+    const warnings = n8n.warning ? [n8n.warning] : [];
 
     return {
+      success: true,
       status: 'success',
+      message: 'Sync completed',
+      warnings,
       syncRun: finishedRun,
       n8n,
       ...result
@@ -152,10 +156,12 @@ async function finishSyncRun(syncRunId, { status, reposSynced = 0, commitsSynced
 
 function createDemoSyncResult(userId, reason) {
   return {
+    success: true,
     status: 'demo',
     userId,
     reposSynced: 4,
     commitsSynced: 42,
+    warnings: [],
     n8n: {
       delivered: false,
       reason: 'Skipped in demo mode'

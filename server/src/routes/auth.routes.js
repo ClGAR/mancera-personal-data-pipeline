@@ -33,7 +33,7 @@ router.get('/me', (req, res) => {
   if (req.isAuthenticated?.() && req.user) {
     return res.json({
       authenticated: true,
-      user: req.user
+      user: serializeUserForClient(req.user)
     });
   }
 
@@ -49,6 +49,19 @@ router.get('/me', (req, res) => {
         }
   });
 });
+
+function serializeUserForClient(user) {
+  return {
+    id: user.id || user.userId || null,
+    userId: user.userId || user.id || null,
+    githubId: user.githubId || user.github_id || null,
+    username: user.username || null,
+    displayName: user.displayName || user.display_name || user.username || null,
+    email: user.email || null,
+    avatarUrl: user.avatarUrl || user.avatar_url || null,
+    isDemo: Boolean(user.isDemo)
+  };
+}
 
 router.post('/logout', (req, res, next) => {
   req.logout((error) => {

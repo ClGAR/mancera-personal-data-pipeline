@@ -15,6 +15,7 @@ export async function upsertGitHubUser({ profile, accessToken }) {
   const userId = `github:${profile.id}`;
   const username = profile.username || profile._json?.login;
   const displayName = profile.displayName || username;
+  const email = profile.emails?.[0]?.value || profile._json?.email || null;
   const avatarUrl = profile.photos?.[0]?.value || profile._json?.avatar_url || null;
 
   if (!supabase) {
@@ -24,6 +25,7 @@ export async function upsertGitHubUser({ profile, accessToken }) {
       githubId: String(profile.id),
       username,
       displayName,
+      email,
       avatarUrl,
       githubAccessToken: accessToken,
       isDemo: false
@@ -63,6 +65,7 @@ export async function upsertGitHubUser({ profile, accessToken }) {
     githubId: String(profile.id),
     username,
     displayName,
+    email,
     avatarUrl,
     githubAccessToken: accessToken,
     isDemo: false

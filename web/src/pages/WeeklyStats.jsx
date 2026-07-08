@@ -3,9 +3,11 @@ import LineChartCard from '../components/LineChartCard.jsx';
 import MiniSparkline from '../components/MiniSparkline.jsx';
 import StatCard from '../components/StatCard.jsx';
 import Table from '../components/Table.jsx';
-import { dailyCommitActivity, dayBreakdown, weeklyStats } from '../data/mockData.js';
 
-function WeeklyStats() {
+function WeeklyStats({ dashboardData, isLoading, dataMessage }) {
+  const weekly = dashboardData?.weekly;
+  const dailyCommitActivity = weekly?.dailyCommitActivity || [];
+  const chartMax = getChartMax(dailyCommitActivity, 10);
   const columns = [
     {
       key: 'day',
@@ -27,14 +29,17 @@ function WeeklyStats() {
       key: 'trend',
       label: 'Trend',
       render: (row) =>
-        row.trend.length ? <MiniSparkline data={row.trend} variant="primary" className="table-sparkline" /> : <span className="muted">-</span>
+        row.trend?.length ? <MiniSparkline data={row.trend} variant="primary" className="table-sparkline" /> : <span className="muted">-</span>
     }
   ];
 
   return (
     <>
+      {isLoading ? <div className="state-banner">Loading weekly stats...</div> : null}
+      {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
+
       <section className="stats-grid" aria-label="Weekly statistics">
-        {weeklyStats.map((metric) => (
+        {(weekly?.weeklyStats || []).map((metric) => (
           <StatCard key={metric.label} {...metric} />
         ))}
       </section>
@@ -44,8 +49,8 @@ function WeeklyStats() {
           title="Daily Commit Activity"
           data={dailyCommitActivity}
           controls={['Last 7 days', 'Line']}
-          maxValue={40}
-          yTicks={[0, 10, 20, 30, 40]}
+          maxValue={chartMax}
+          yTicks={buildTicks(chartMax)}
           showPointLabels
           compact
           className="daily-chart-card"
@@ -55,7 +60,7 @@ function WeeklyStats() {
           <div className="card-header">
             <h2>Breakdown by Day</h2>
           </div>
-          <Table columns={columns} rows={dayBreakdown} />
+          <Table columns={columns} rows={weekly?.dayBreakdown || []} />
           <button className="text-link" type="button">
             View full week history
             <ArrowRight size={15} aria-hidden="true" />
@@ -77,8 +82,8 @@ function WeeklyStats() {
               </span>
               <div>
                 <strong>Most Productive Day</strong>
-                <p>Wednesday, May 14</p>
-                <span>32 commits</span>
+                <p>{weekly?.insights?.bestDay}</p>
+                <span>{weekly?.insights?.bestDayCommits}</span>
               </div>
             </div>
             <div className="insight-row">
@@ -87,8 +92,8 @@ function WeeklyStats() {
               </span>
               <div>
                 <strong>Week over Week Growth</strong>
-                <p>+18%</p>
-                <span>vs May 4 - May 11</span>
+                <p>{weekly?.insights?.growth}</p>
+                <span>{weekly?.insights?.growthDetail}</span>
               </div>
             </div>
             <div className="insight-row">
@@ -97,19 +102,28 @@ function WeeklyStats() {
               </span>
               <div>
                 <strong>Most Active Time</strong>
-                <p>10:00 AM - 2:00 PM</p>
+                <p>{weekly?.insights?.peakWindow}</p>
                 <span>Your peak commit window</span>
               </div>
             </div>
           </div>
 
           <div className="highlight-box">
-            You had 23 more commits this week compared to the previous 7-day period.
+            {weekly?.insights?.highlight}
           </div>
         </article>
       </section>
     </>
   );
+}
+
+function getChartMax(data, fallback) {
+  const max = Math.max(...data.map((item) => item.value), fallback);
+  return Math.ceil(max / 10) * 10;
+}
+
+function buildTicks(max) {
+  return [0, Math.round(max * 0.25), Math.round(max * 0.5), Math.round(max * 0.75), max];
 }
 
 export default WeeklyStats;

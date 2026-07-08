@@ -3,7 +3,6 @@ import Badge from '../components/Badge.jsx';
 import MiniSparkline from '../components/MiniSparkline.jsx';
 import RepoIcon from '../components/RepoIcon.jsx';
 import Table from '../components/Table.jsx';
-import { repositories, topRepoHighlights } from '../data/mockData.js';
 
 const languageClass = {
   TypeScript: 'typescript',
@@ -12,7 +11,10 @@ const languageClass = {
   JavaScript: 'javascript'
 };
 
-function TopRepos() {
+function TopRepos({ dashboardData, isLoading, dataMessage }) {
+  const repoData = dashboardData?.topRepos;
+  const repositories = repoData?.repositories || [];
+  const topRepoHighlights = repoData?.highlights || [];
   const columns = [
     { key: 'rank', label: '#' },
     {
@@ -61,6 +63,9 @@ function TopRepos() {
 
   return (
     <section className="top-repos-layout">
+      {isLoading ? <div className="state-banner">Loading repository rankings...</div> : null}
+      {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
+
       <div className="repo-highlight-grid">
         {topRepoHighlights.map((item) => {
           const Icon = item.tone === 'success' ? TrendingUp : Trophy;
@@ -104,7 +109,7 @@ function TopRepos() {
         <Table columns={columns} rows={repositories} className="repo-data-table" />
 
         <div className="pagination-footer">
-          <span>Showing 1 to 8 of 24 repositories</span>
+          <span>Showing 1 to {repositories.length} of {repositories.length} repositories</span>
           <div className="pagination-buttons">
             <button type="button" aria-label="Previous page">
               <ChevronLeft size={17} aria-hidden="true" />

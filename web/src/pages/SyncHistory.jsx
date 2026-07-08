@@ -1,9 +1,9 @@
 import { Calendar, Clock3, Filter, Info, ListFilter } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import Table from '../components/Table.jsx';
-import { syncHistory } from '../data/mockData.js';
 
-function SyncHistory() {
+function SyncHistory({ dashboardData, isLoading, dataMessage }) {
+  const syncHistory = dashboardData?.sync?.history || [];
   const columns = [
     {
       key: 'time',
@@ -19,7 +19,7 @@ function SyncHistory() {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <Badge variant={row.status === 'failed' ? 'danger' : 'success'} icon>
+        <Badge variant={getStatusVariant(row.status)} icon>
           {row.status}
         </Badge>
       )
@@ -50,6 +50,9 @@ function SyncHistory() {
 
   return (
     <section className="sync-history-layout">
+      {isLoading ? <div className="state-banner">Loading sync history...</div> : null}
+      {!isLoading && dataMessage ? <div className="state-banner muted-banner">{dataMessage}</div> : null}
+
       <div className="filter-toolbar">
         <div className="filter-group">
           <button className="filter-chip active" type="button">
@@ -88,6 +91,12 @@ function SyncHistory() {
       </article>
     </section>
   );
+}
+
+function getStatusVariant(status) {
+  if (status === 'failed') return 'danger';
+  if (status === 'success') return 'success';
+  return 'neutral';
 }
 
 export default SyncHistory;

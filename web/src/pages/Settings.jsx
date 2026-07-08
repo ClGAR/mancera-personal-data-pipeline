@@ -16,7 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
-import { accountSummary } from '../data/mockData.js';
+import { getUserDisplayName, getUserEmail, getUserInitials, getUserUsername } from '../utils/userDisplay.js';
 
 const settingsNav = [
   { label: 'Profile', icon: UserRound, active: true },
@@ -35,7 +35,21 @@ const quickActions = [
 
 const summaryIcons = [Calendar, Zap, Database, RefreshCcw];
 
-function Settings() {
+function Settings({ auth, dashboardData }) {
+  const user = auth?.user;
+  const displayName = auth?.authenticated ? getUserDisplayName(user) : 'GitHub user';
+  const username = auth?.authenticated ? getUserUsername(user) : 'Not connected';
+  const email = auth?.authenticated ? getUserEmail(user) : 'Not provided by GitHub';
+  const initials = auth?.authenticated ? getUserInitials(user) : 'GH';
+  const topRepository = dashboardData?.topRepos?.source === 'api' ? dashboardData?.topRepos?.repositories?.[0]?.name : null;
+  const latestSync = dashboardData?.sync?.source === 'api' ? dashboardData?.sync?.overviewJobs?.[0]?.time : null;
+  const accountSummary = [
+    ['GitHub username', username],
+    ['Email', email],
+    ['Top repository', topRepository || 'Sync data pending'],
+    ['Last sync', latestSync || 'Not synced yet']
+  ];
+
   return (
     <section className="settings-layout">
       <aside className="card settings-nav-card">
@@ -58,10 +72,10 @@ function Settings() {
         </div>
 
         <div className="profile-photo-row">
-          <span className="photo-avatar">AJ</span>
+          <span className="photo-avatar">{initials}</span>
           <div>
             <span className="field-label">Profile Photo</span>
-            <p>JPG, PNG or GIF. Max size 5MB.</p>
+            <p>GitHub profile images stay managed by GitHub.</p>
             <div className="photo-actions">
               <button className="outline-button" type="button">
                 <Upload size={16} aria-hidden="true" />
@@ -78,15 +92,15 @@ function Settings() {
         <form className="settings-form">
           <label>
             <span>Full Name</span>
-            <input defaultValue="Alex Johnson" />
+            <input value={displayName} readOnly />
           </label>
           <label>
             <span>Email Address</span>
-            <input defaultValue="alex.johnson@example.com" />
+            <input value={email} readOnly />
           </label>
           <label>
             <span>Username</span>
-            <input defaultValue="alex.dev" />
+            <input value={username} readOnly />
             <em>This is your public username. It appears in data insights and exports.</em>
           </label>
           <button className="primary-button save-button" type="button">
@@ -103,8 +117,8 @@ function Settings() {
               <UserRound size={28} aria-hidden="true" />
             </span>
             <div>
-              <strong>Alex Johnson</strong>
-              <Badge variant="primary">Pro Plan</Badge>
+              <strong>{displayName}</strong>
+              <Badge variant={auth?.authenticated ? 'success' : 'neutral'}>{auth?.authenticated ? 'GitHub Connected' : 'Not Connected'}</Badge>
             </div>
           </div>
           <dl className="summary-list">

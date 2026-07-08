@@ -1,6 +1,5 @@
 import { ArrowRight, Bot, Github, Mail, ShieldCheck, Slack, Webhook, Zap } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
-import { integrationCards } from '../data/mockData.js';
 
 const integrationIcons = {
   github: Github,
@@ -11,7 +10,9 @@ const integrationIcons = {
   slack: Slack
 };
 
-function Integrations() {
+function Integrations({ dashboardData }) {
+  const integrationCards = dashboardData?.integrations?.cards || [];
+
   return (
     <section className="integrations-page">
       <div className="integration-grid">

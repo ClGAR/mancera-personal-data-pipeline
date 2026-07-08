@@ -110,7 +110,7 @@ export const overviewIntegrations = [
   { name: 'Supabase', status: 'Connected', type: 'supabase' },
   { name: 'GitHub', status: 'Connected', type: 'github' },
   { name: 'n8n Webhook', status: 'Connected', type: 'webhook' },
-  { name: 'Anthropic Claude', status: 'Connected', type: 'ai' }
+  { name: 'Ollama Local AI', status: 'Connected', type: 'ai' }
 ];
 
 export const overviewRepos = [
@@ -240,13 +240,13 @@ export const integrationCards = [
     ]
   },
   {
-    title: 'Anthropic Claude',
+    title: 'Ollama Local AI',
     type: 'ai',
-    description: 'Enable AI-powered insights and natural language queries about your data.',
+    description: 'Run AI-powered insights locally and ask natural language questions about your data.',
     status: 'Connected',
     details: [
-      ['Model', 'Claude 3.5 Sonnet'],
-      ['Last used', 'May 19, 2025 09:10 AM']
+      ['Model', 'llama3.2'],
+      ['Provider', 'Local Ollama']
     ]
   },
   {

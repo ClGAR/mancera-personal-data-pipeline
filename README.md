@@ -13,7 +13,8 @@ This project demonstrates practical junior-dev skills with senior-level polish: 
 - Supabase JS client with Postgres
 - Axios for GitHub and webhook calls
 - node-cron for hourly sync jobs
-- Anthropic SDK/API for chatbot answers
+- Ollama local AI for free chatbot answers
+- Optional Anthropic SDK/API support for hosted chatbot answers
 - n8n webhook integration
 - React and Vite
 - Plain CSS
@@ -36,7 +37,6 @@ This project demonstrates practical junior-dev skills with senior-level polish: 
 ├── package.json
 ├── README.md
 ├── .gitignore
-├── .env.example
 ├── server
 │   ├── package.json
 │   └── src
@@ -71,26 +71,55 @@ The web app runs on Vite at `http://localhost:5173`. The API runs at `http://loc
 
 The app will start without real credentials. In that mode, the backend returns demo responses and setup guidance instead of crashing.
 
-## Environment variables
+## Connecting the frontend to the backend
 
-Create `server/.env` manually from `.env.example` when you are ready to connect services. The backend always loads environment variables from `server/.env`, even if you run commands from the project root.
+Start the backend:
 
 ```bash
-cp .env.example server/.env
+cd server
+npm run dev
 ```
 
-Important variables:
+Start the frontend in a separate terminal:
 
-- `SESSION_SECRET`: a long random string for Express sessions
-- `GITHUB_CLIENT_ID`: GitHub OAuth app client ID
-- `GITHUB_CLIENT_SECRET`: GitHub OAuth app client secret
-- `GITHUB_CALLBACK_URL`: usually `http://localhost:4000/auth/github/callback`
-- `SUPABASE_URL`: Supabase project URL
-- `SUPABASE_ANON_KEY`: public anon key
-- `SUPABASE_SERVICE_ROLE_KEY`: server-only service role key
-- `ANTHROPIC_API_KEY`: key for chatbot responses
-- `N8N_WEBHOOK_URL`: optional webhook called after sync
-- `VITE_API_BASE_URL`: frontend API URL
+```bash
+cd web
+npm run dev
+```
+
+The frontend uses `http://localhost:4000` by default. You can optionally create `web/.env` with:
+
+```bash
+VITE_API_BASE_URL=http://localhost:4000
+```
+
+All authenticated frontend requests are sent to the Express API with cookies included. Do not put Supabase service keys or other backend secrets in `web/.env`.
+
+## Environment variables
+
+Create a `server/.env` file manually and add the required backend environment variables. The backend always loads environment variables from `server/.env`, even if you run commands from the project root.
+
+Required backend variables for the free local Ollama setup:
+
+- `NODE_ENV`
+- `PORT`
+- `CLIENT_URL`
+- `SESSION_SECRET`
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `GITHUB_CALLBACK_URL`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `AI_PROVIDER`
+- `OLLAMA_BASE_URL`
+- `OLLAMA_MODEL`
+
+Optional backend variables:
+
+- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_MODEL`
+- `N8N_WEBHOOK_URL`
 
 Never commit `.env` or any real secrets.
 
@@ -104,6 +133,43 @@ Never commit `.env` or any real secrets.
 6. Add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` to `server/.env`.
 
 The Express server uses the service role key only on the backend. Do not expose it in React.
+
+## Ollama setup
+
+Ollama is the default free AI provider for local development.
+
+1. Install Ollama from `https://ollama.com`.
+2. Pull the local model:
+
+```bash
+ollama pull llama3.2
+```
+
+3. Start Ollama. The desktop app usually starts the local server automatically. From a terminal, you can also run:
+
+```bash
+ollama serve
+```
+
+4. Add these values to `server/.env`:
+
+```bash
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+```
+
+The chatbot calls `POST /api/chat` on your local Ollama server and falls back to synced Supabase/GitHub data if Ollama is not running or the selected model is unavailable.
+
+## Optional Anthropic setup
+
+Anthropic is not required for the free local setup. To use it later, set:
+
+```bash
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_MODEL=claude-3-5-sonnet-latest
+```
 
 ## GitHub OAuth setup
 

@@ -11,6 +11,7 @@ import {
   Settings
 } from 'lucide-react';
 import { navItems } from '../data/mockData.js';
+import { getUserDisplayName, getUserInitials, getUserUsername } from '../utils/userDisplay.js';
 
 const icons = {
   overview: Home,
@@ -22,7 +23,12 @@ const icons = {
   settings: Settings
 };
 
-function Sidebar({ activePage, onNavigate }) {
+function Sidebar({ activePage, onNavigate, auth }) {
+  const user = auth?.user;
+  const displayName = auth?.authenticated ? getUserDisplayName(user) : 'GitHub not connected';
+  const username = auth?.authenticated ? getUserUsername(user) : 'Connect GitHub to sync';
+  const initials = auth?.authenticated ? getUserInitials(user) : 'GH';
+
   return (
     <aside className="sidebar" aria-label="Primary navigation">
       <div className="brand-lockup">
@@ -65,11 +71,11 @@ function Sidebar({ activePage, onNavigate }) {
         </div>
 
         <div className="profile-card">
-          <span className="avatar avatar-large">AM</span>
+          <span className="avatar avatar-large">{initials}</span>
           <div>
-            <strong>Alex Johnson</strong>
-            <p>alex.dev</p>
-            <span>Pro Plan</span>
+            <strong>{displayName}</strong>
+            <p>{username}</p>
+            <span>{auth?.authenticated ? 'GitHub Connected' : 'Not Connected'}</span>
           </div>
           <ChevronUp size={17} aria-hidden="true" />
         </div>

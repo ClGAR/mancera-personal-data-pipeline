@@ -6,6 +6,9 @@ const server = app.listen(env.port, () => {
   console.log(`Server running on http://localhost:${env.port}`);
   console.log(`Supabase configured: ${flags.hasSupabase}`);
   console.log(`GitHub OAuth configured: ${flags.hasGithubOAuth}`);
+  console.log(`AI provider: ${env.aiProvider}`);
+  console.log(`Ollama configured: ${flags.hasOllama}`);
+  console.log(`Anthropic configured: ${flags.hasAnthropic}`);
 });
 
 startSyncCron();
