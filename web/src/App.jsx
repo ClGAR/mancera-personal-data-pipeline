@@ -211,7 +211,7 @@ function App() {
 
   function handleClearLocalCache() {
     Object.keys(window.localStorage)
-      .filter((key) => key.startsWith('pdp:'))
+      .filter((key) => key.startsWith('pdp:') || key.startsWith('personal-data-pipeline-'))
       .forEach((key) => window.localStorage.removeItem(key));
     window.sessionStorage.clear();
     notify('Local dashboard preferences and session-only UI state were cleared.', 'success', 'Local cache cleared');

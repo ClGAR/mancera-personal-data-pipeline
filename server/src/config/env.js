@@ -62,6 +62,7 @@ const isValidHttpUrl = (value, placeholderHosts = new Set()) => {
 };
 
 export const env = {
+  appTimezone: optional(process.env.APP_TIMEZONE, 'Asia/Manila').trim() || 'Asia/Manila',
   aiProvider: normalizeProvider(process.env.AI_PROVIDER),
   nodeEnv: optional(process.env.NODE_ENV, 'development'),
   port: Number(process.env.PORT || 4000),

@@ -20,7 +20,7 @@ export function requireAuth(req, res, next) {
   }
 
   return res.status(401).json({
-    error: 'Authentication required',
+    error: 'auth_required',
     message: 'Connect GitHub first by visiting /auth/github.'
   });
 }

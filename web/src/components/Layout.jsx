@@ -20,7 +20,7 @@ function Layout({
   return (
     <div className="app-shell">
       <Sidebar activePage={activePage} onNavigate={onNavigate} auth={auth} />
-      <main className="main-panel">
+      <main className={`main-panel page-${activePage}`}>
         <Topbar
           meta={meta}
           onPrimaryAction={onPrimaryAction}

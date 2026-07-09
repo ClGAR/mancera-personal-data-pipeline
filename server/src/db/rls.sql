@@ -7,6 +7,10 @@ alter table github_accounts enable row level security;
 alter table repositories enable row level security;
 alter table commits enable row level security;
 alter table sync_runs enable row level security;
+alter table chat_sessions enable row level security;
+alter table chat_messages enable row level security;
+alter table user_memories enable row level security;
+alter table assistant_preferences enable row level security;
 
 -- This project stores app user ids like "github:12345". If you later connect
 -- Supabase Auth, replace these examples with policies that compare user_id to
@@ -30,6 +34,22 @@ using (user_id = current_setting('request.jwt.claims', true)::jsonb ->> 'user_id
 
 create policy "Sync runs are readable by owner"
 on sync_runs for select
+using (user_id = current_setting('request.jwt.claims', true)::jsonb ->> 'user_id');
+
+create policy "Chat sessions are readable by owner"
+on chat_sessions for select
+using (user_id = current_setting('request.jwt.claims', true)::jsonb ->> 'user_id');
+
+create policy "Chat messages are readable by owner"
+on chat_messages for select
+using (user_id = current_setting('request.jwt.claims', true)::jsonb ->> 'user_id');
+
+create policy "User memories are readable by owner"
+on user_memories for select
+using (user_id = current_setting('request.jwt.claims', true)::jsonb ->> 'user_id');
+
+create policy "Assistant preferences are readable by owner"
+on assistant_preferences for select
 using (user_id = current_setting('request.jwt.claims', true)::jsonb ->> 'user_id');
 
 -- In production, writes should go through the Express API or trusted edge

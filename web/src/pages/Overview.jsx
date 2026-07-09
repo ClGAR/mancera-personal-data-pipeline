@@ -1,7 +1,8 @@
-import { ArrowRight, Bot, ChevronRight, Clock3, Copy, Github, Plug, Send, ThumbsDown, ThumbsUp, Timer, Zap } from 'lucide-react';
+import { ArrowRight, Bot, ChevronRight, Clock3, Copy, Github, Info, Plug, Send, ThumbsDown, ThumbsUp, Timer, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { askChatbot } from '../api.js';
 import Badge from '../components/Badge.jsx';
+import ChatMessageText from '../components/ChatMessageText.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import LineChartCard from '../components/LineChartCard.jsx';
 import MiniSparkline from '../components/MiniSparkline.jsx';
@@ -22,7 +23,7 @@ const miniQuickPrompts = [
   { label: 'Latest sync', prompt: 'What happened in my latest sync?' }
 ];
 
-function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify }) {
+function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify, onConnectGitHub }) {
   const weekly = dashboardData?.weekly;
   const topRepos = dashboardData?.topRepos;
   const sync = dashboardData?.sync;
@@ -81,6 +82,7 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
                 mode: result?.mode,
                 source: result?.source,
                 usedLiveData: result?.usedLiveData,
+                memoryUsed: result?.memoryUsed,
                 warning: result?.warning
               }
             : message
@@ -256,13 +258,18 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
                   {message.role === 'ai' ? <span className="ai-avatar">AI</span> : null}
                   <div className="message-stack">
                     <div className={`message-bubble ${message.loading ? 'loading-bubble' : ''} ${message.error ? 'error-bubble' : ''}`.trim()}>
-                      <p>{message.content}</p>
-                      {message.role === 'ai' && !message.loading ? <MiniSourceBadge message={message} /> : null}
-                      {message.warning ? <em className="message-warning">{message.warning}</em> : null}
-                      <span>{message.time}</span>
+                      <ChatMessageText content={message.content} />
+                      {message.role === 'ai' && !message.loading ? <MiniMessageNotice message={message} /> : null}
+                      {message.source === 'auth-required' ? (
+                        <button className="message-action-button" type="button" onClick={onConnectGitHub}>
+                          Connect GitHub
+                        </button>
+                      ) : null}
+                      <span className="message-time">{message.time}</span>
                     </div>
                     {message.role === 'ai' ? (
                       <div className="feedback-actions">
+                        {!message.loading ? <MiniMessageMetaButton message={message} /> : null}
                         <button type="button" aria-label="Copy response" onClick={() => copyMessage(message)}>
                           <Copy size={16} aria-hidden="true" />
                         </button>
@@ -305,14 +312,14 @@ function Overview({ onNavigate, dashboardData, isLoading, dataMessage, notify })
             <input
               value={chatInput}
               onChange={(event) => setChatInput(event.target.value)}
-              placeholder="Ask a quick question about your GitHub activity or this project."
+              placeholder="Ask about your GitHub data or any development question..."
               aria-label="Ask a quick AI question"
             />
             <button className="primary-icon-button" type="submit" disabled={chatAsking} aria-label="Send question">
               <Send size={18} aria-hidden="true" />
             </button>
           </form>
-          <p className="chat-disclaimer">AI automatically uses your synced GitHub data when relevant, or answers general questions with your local Ollama model.</p>
+          <p className="chat-disclaimer">Ask about your GitHub data or any development question.</p>
         </article>
       </section>
     </>
@@ -340,26 +347,91 @@ function getStatusVariant(status) {
 
 export default Overview;
 
-function MiniSourceBadge({ message }) {
+function MiniMessageNotice({ message }) {
   if (message.source === 'supabase-fallback') {
-    return <span className="source-badge source-fallback">Synced Data Fallback</span>;
+    return <em className="message-notice">Answered from synced data fallback.</em>;
   }
 
-  if (message.requestedMode === 'auto' && message.mode === 'github') {
-    return <span className="source-badge source-github">Auto-selected GitHub Data</span>;
+  if (message.source === 'auth-required') {
+    return <em className="message-notice">Connect GitHub to answer this.</em>;
   }
 
-  if (message.requestedMode === 'auto' && message.mode === 'general') {
-    return <span className="source-badge source-general">Auto-selected General AI</span>;
+  if (message.source === 'error' || message.error) {
+    return <em className="message-notice danger">Assistant error. Please try again.</em>;
   }
 
-  if (message.mode === 'github') {
-    return <span className="source-badge source-github">GitHub Data</span>;
-  }
-
-  if (message.mode === 'general') {
-    return <span className="source-badge source-general">General AI</span>;
+  if (message.warning) {
+    return <em className="message-notice">{message.warning}</em>;
   }
 
   return null;
+}
+
+function MiniMessageMetaButton({ message }) {
+  const label = buildMiniMessageMetadataLabel(message);
+
+  return (
+    <button className="message-meta-button" type="button" aria-label={label} title={label}>
+      <Info size={15} aria-hidden="true" />
+    </button>
+  );
+}
+
+function getMiniSourceLabel(message) {
+  if (message.source === 'server-time') {
+    return 'App context';
+  }
+
+  if (message.source === 'server-calculation') {
+    return 'App calculation';
+  }
+
+  if (message.source === 'auth-required') {
+    return 'GitHub required';
+  }
+
+  if (message.source === 'error') {
+    return 'Assistant error';
+  }
+
+  if (message.source === 'ollama-general') {
+    return 'General AI';
+  }
+
+  if (message.source === 'ollama-grounded' || message.source === 'anthropic') {
+    return 'GitHub Data';
+  }
+
+  if (message.source === 'supabase-fallback') {
+    return 'Synced Data Fallback';
+  }
+
+  if (message.requestedMode === 'auto' && message.mode === 'github') {
+    return 'Auto-selected GitHub Data';
+  }
+
+  if (message.requestedMode === 'auto' && message.mode === 'general') {
+    return 'Auto-selected General AI';
+  }
+
+  if (message.mode === 'github') {
+    return 'GitHub Data';
+  }
+
+  if (message.mode === 'general') {
+    return 'General AI';
+  }
+
+  return 'Unknown';
+}
+
+function buildMiniMessageMetadataLabel(message) {
+  const parts = [
+    `Source: ${getMiniSourceLabel(message)}`,
+    `Mode: ${message.mode || message.requestedMode || 'auto'}`,
+    `Live data used: ${message.usedLiveData ? 'yes' : 'no'}`
+  ];
+
+  if (message.memoryUsed) parts.push('Memory used: yes');
+  return parts.join('. ');
 }

@@ -39,6 +39,10 @@ async function request(path, options = {}) {
 }
 
 function getSafeErrorMessage(data, status) {
+  if (data?.error === 'auth_required') return data?.message || 'Please connect GitHub first.';
+  if (data?.error === 'database_schema_missing') return data?.message || 'Backend chat history is not set up yet.';
+  if (data?.error === 'session_create_failed') return data?.message || 'Chat session could not be saved right now.';
+  if (data?.error === 'chat_persistence_failed') return data?.message || 'Chat history is unavailable right now.';
   if (status === 401) return data?.message || 'Please connect GitHub first.';
   if (status === 503) return data?.message || 'A required service is not configured.';
   if (status >= 500) return 'The backend hit an internal error. Please try again.';
@@ -86,10 +90,66 @@ export function runManualSync() {
   });
 }
 
-export function askChatbot(question, mode = 'auto') {
+export function askChatbot(question, mode = 'auto', options = {}) {
   return request('/chatbot/ask', {
     method: 'POST',
-    body: { question, mode }
+    body: {
+      question,
+      mode,
+      sessionId: options.sessionId,
+      memoryEnabled: options.memoryEnabled
+    }
+  });
+}
+
+export function getChatSessions() {
+  return request('/chatbot/sessions');
+}
+
+export function createChatSession(title = 'New chat') {
+  return request('/chatbot/sessions', {
+    method: 'POST',
+    body: { title }
+  });
+}
+
+export function getChatSessionMessages(sessionId) {
+  return request(`/chatbot/sessions/${sessionId}/messages`);
+}
+
+export function deleteChatSession(sessionId) {
+  return request(`/chatbot/sessions/${sessionId}`, {
+    method: 'DELETE'
+  });
+}
+
+export function getChatMemories() {
+  return request('/chatbot/memories');
+}
+
+export function createChatMemory(content, memoryType = 'preference') {
+  return request('/chatbot/memories', {
+    method: 'POST',
+    body: { content, memoryType }
+  });
+}
+
+export function deleteChatMemory(memoryId) {
+  return request(`/chatbot/memories/${memoryId}`, {
+    method: 'DELETE'
+  });
+}
+
+export function clearChatMemories() {
+  return request('/chatbot/memories', {
+    method: 'DELETE'
+  });
+}
+
+export function updateAssistantPreferences(updates) {
+  return request('/chatbot/preferences', {
+    method: 'PATCH',
+    body: updates
   });
 }
 
@@ -112,6 +172,15 @@ export const api = {
   runManualSync,
   syncNow: runManualSync,
   askChatbot,
+  getChatSessions,
+  createChatSession,
+  getChatSessionMessages,
+  deleteChatSession,
+  getChatMemories,
+  createChatMemory,
+  deleteChatMemory,
+  clearChatMemories,
+  updateAssistantPreferences,
   getHealth,
   loginWithGitHub
 };

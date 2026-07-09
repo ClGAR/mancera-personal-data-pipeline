@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   Bell,
+  Brain,
   Calendar,
   ChevronRight,
   Database,
@@ -18,7 +19,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../api.js';
+import { API_BASE_URL, clearChatMemories, deleteChatMemory, getChatMemories, updateAssistantPreferences } from '../api.js';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
@@ -29,6 +30,7 @@ const settingsNav = [
   { id: 'github', label: 'GitHub Account', icon: Github },
   { id: 'sync', label: 'Sync Preferences', icon: RefreshCcw },
   { id: 'appearance', label: 'Appearance', icon: Monitor },
+  { id: 'memory', label: 'Assistant Memory', icon: Brain },
   { id: 'privacy', label: 'Data Privacy', icon: Shield },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'danger', label: 'Danger Zone', icon: Zap, danger: true }
@@ -84,6 +86,12 @@ function Settings({
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [cacheConfirmOpen, setCacheConfirmOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
+  const [memoryState, setMemoryState] = useState({
+    loading: false,
+    error: '',
+    items: [],
+    preferences: { memoryEnabled: true }
+  });
   const { themePreference, resolvedTheme, setThemePreference } = useTheme();
   const activeSection = settingsSection || 'profile';
   const topRepository = dashboardData?.topRepos?.source === 'api' ? dashboardData?.topRepos?.repositories?.[0]?.name : null;
@@ -98,6 +106,20 @@ function Settings({
   useEffect(() => {
     setProfileForm({ displayName, email, username });
   }, [displayName, email, username]);
+
+  useEffect(() => {
+    if (auth?.authenticated) {
+      loadMemorySettings();
+    } else {
+      setMemoryState({
+        loading: false,
+        error: '',
+        items: [],
+        preferences: { memoryEnabled: false }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth?.authenticated]);
 
   function saveProfile(event) {
     event.preventDefault();
@@ -123,6 +145,62 @@ function Settings({
   function confirmClearLocalCache() {
     setCacheConfirmOpen(false);
     onClearLocalCache?.();
+  }
+
+  async function loadMemorySettings() {
+    setMemoryState((current) => ({ ...current, loading: true, error: '' }));
+
+    try {
+      const payload = await getChatMemories();
+      setMemoryState({
+        loading: false,
+        error: '',
+        items: payload?.items || [],
+        preferences: payload?.preferences || { memoryEnabled: true }
+      });
+    } catch (error) {
+      setMemoryState((current) => ({
+        ...current,
+        loading: false,
+        error: error.message || 'Memory settings could not load.'
+      }));
+    }
+  }
+
+  async function setMemoryEnabled(value) {
+    try {
+      const payload = await updateAssistantPreferences({ memoryEnabled: value });
+      setMemoryState((current) => ({
+        ...current,
+        preferences: payload?.preferences || { ...current.preferences, memoryEnabled: value }
+      }));
+      notify?.(value ? 'Assistant memory is on.' : 'Assistant memory is off.', 'success', 'Memory updated');
+    } catch (error) {
+      notify?.(error.message || 'Memory setting could not be updated.', 'error', 'Memory update failed');
+    }
+  }
+
+  async function removeMemory(memoryId) {
+    try {
+      await deleteChatMemory(memoryId);
+      setMemoryState((current) => ({
+        ...current,
+        items: current.items.filter((item) => item.id !== memoryId)
+      }));
+      notify?.('Memory deleted.', 'success', 'Memory updated');
+    } catch (error) {
+      notify?.(error.message || 'Memory could not be deleted.', 'error', 'Delete failed');
+    }
+  }
+
+  async function removeAllMemories() {
+    try {
+      await clearChatMemories();
+      setMemoryState((current) => ({ ...current, items: [] }));
+      notify?.('All saved assistant memories were cleared.', 'success', 'Memory cleared');
+    } catch (error) {
+      notify?.(error.message || 'Memories could not be cleared.', 'error', 'Clear failed');
+    }
   }
 
   return (
@@ -159,6 +237,11 @@ function Settings({
           notificationPrefs={notificationPrefs}
           setNotificationPrefs={setNotificationPrefs}
           saveNotificationPreferences={saveNotificationPreferences}
+          memoryState={memoryState}
+          onSetMemoryEnabled={setMemoryEnabled}
+          onDeleteMemory={removeMemory}
+          onClearMemories={removeAllMemories}
+          onRefreshMemory={loadMemorySettings}
           themePreference={themePreference}
           resolvedTheme={resolvedTheme}
           setThemePreference={setThemePreference}
@@ -306,6 +389,11 @@ function SettingsSection({
   notificationPrefs,
   setNotificationPrefs,
   saveNotificationPreferences,
+  memoryState,
+  onSetMemoryEnabled,
+  onDeleteMemory,
+  onClearMemories,
+  onRefreshMemory,
   themePreference,
   resolvedTheme,
   setThemePreference,
@@ -380,6 +468,72 @@ function SettingsSection({
           <Download size={16} aria-hidden="true" />
           Export My Data
         </button>
+      </>
+    );
+  }
+
+  if (section === 'memory') {
+    return (
+      <>
+        <div className="section-title">
+          <h2>Assistant Memory</h2>
+          <p>Memory helps the assistant remember your preferences and project context.</p>
+        </div>
+
+        {!auth?.authenticated ? (
+          <div className="local-only-note">
+            <span>GitHub required</span>
+            <p>Connect GitHub to save assistant memory in Supabase. General chat still works without memory.</p>
+          </div>
+        ) : (
+          <div className="settings-form memory-settings-panel">
+            <div className="memory-explainer">
+              <strong>Memory helps the assistant remember your preferences and project context.</strong>
+              <p>Secrets and API keys are never intentionally saved. This is a portfolio implementation, not production-grade secret detection.</p>
+            </div>
+
+            <ToggleRow
+              label={memoryState.preferences?.memoryEnabled === false ? 'Memory disabled' : 'Memory enabled'}
+              checked={memoryState.preferences?.memoryEnabled !== false}
+              onChange={onSetMemoryEnabled}
+            />
+
+            {memoryState.error ? <p className="settings-error">{memoryState.error}</p> : null}
+            {memoryState.loading ? <p className="settings-muted">Loading saved memories...</p> : null}
+
+            <div className="memory-list">
+              {memoryState.items.length ? (
+                memoryState.items.map((memory) => (
+                  <div className="memory-row" key={memory.id}>
+                    <div>
+                      <span>{formatMemoryType(memory.memoryType)}</span>
+                      <p>{memory.content}</p>
+                    </div>
+                    <button className="outline-button danger-button compact-action" type="button" onClick={() => onDeleteMemory(memory.id)}>
+                      <Trash2 size={15} aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="local-only-note">
+                  <span>No memories yet</span>
+                  <p>Ask the assistant to remember a durable preference or correction, then it will appear here.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="danger-action-list">
+              <button className="outline-button neutral" type="button" onClick={onRefreshMemory}>
+                Refresh memory
+              </button>
+              <button className="outline-button danger-button" type="button" onClick={onClearMemories} disabled={!memoryState.items.length}>
+                <Trash2 size={16} aria-hidden="true" />
+                Clear all memories
+              </button>
+            </div>
+          </div>
+        )}
       </>
     );
   }
@@ -542,6 +696,18 @@ function ToggleRow({ label, checked, onChange }) {
       <span>{label}</span>
     </label>
   );
+}
+
+function formatMemoryType(value) {
+  const labels = {
+    preference: 'Preference',
+    correction: 'Correction',
+    project_context: 'Project context',
+    personal_context: 'Personal context',
+    learning_goal: 'Learning goal'
+  };
+
+  return labels[value] || 'Memory';
 }
 
 function readStoredObject(key, fallback) {

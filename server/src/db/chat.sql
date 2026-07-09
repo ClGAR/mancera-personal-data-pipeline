@@ -1,3 +1,7 @@
+-- Chat history and assistant memory tables for the AI Assistant.
+-- Run this in Supabase SQL Editor if New Chat or Recent Chats report that
+-- chat history tables are unavailable. It is safe to run more than once.
+
 create extension if not exists pgcrypto;
 
 create table if not exists profiles (
@@ -7,55 +11,6 @@ create table if not exists profiles (
   username text,
   display_name text,
   avatar_url text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists github_accounts (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references profiles(user_id) on delete cascade,
-  github_id text not null unique,
-  username text not null,
-  avatar_url text,
-  access_token text,
-  scope text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists repositories (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references profiles(user_id) on delete cascade,
-  github_id text not null unique,
-  repo_name text not null,
-  full_name text not null,
-  private boolean not null default false,
-  html_url text,
-  default_branch text,
-  pushed_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists commits (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references profiles(user_id) on delete cascade,
-  repo_id uuid references repositories(id) on delete set null,
-  repo_name text not null,
-  commit_sha text not null unique,
-  commit_message text,
-  author_name text,
-  committed_at timestamptz,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists sync_runs (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references profiles(user_id) on delete cascade,
-  status text not null default 'running',
-  repos_synced integer not null default 0,
-  commits_synced integer not null default 0,
-  error_message text,
-  started_at timestamptz,
-  finished_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -104,13 +59,24 @@ create table if not exists assistant_preferences (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_github_accounts_user_id on github_accounts(user_id);
-create index if not exists idx_repositories_user_id on repositories(user_id);
-create index if not exists idx_commits_user_id_committed_at on commits(user_id, committed_at desc);
-create index if not exists idx_commits_repo_name on commits(repo_name);
-create index if not exists idx_sync_runs_user_id_created_at on sync_runs(user_id, created_at desc);
+alter table chat_sessions add column if not exists archived_at timestamptz;
+alter table chat_messages add column if not exists used_live_data boolean not null default false;
+
 create index if not exists idx_chat_sessions_user_id_updated_at on chat_sessions(user_id, updated_at desc);
 create index if not exists idx_chat_sessions_user_id_active_updated_at on chat_sessions(user_id, archived_at, updated_at desc);
 create index if not exists idx_chat_messages_session_created_at on chat_messages(session_id, created_at);
 create index if not exists idx_chat_messages_user_id_created_at on chat_messages(user_id, created_at desc);
 create index if not exists idx_user_memories_user_id_active on user_memories(user_id, is_active, updated_at desc);
+
+alter table chat_sessions enable row level security;
+alter table chat_messages enable row level security;
+alter table user_memories enable row level security;
+alter table assistant_preferences enable row level security;
+
+-- The Express backend uses the Supabase service role key and must keep it
+-- server-only. These grants support service-role access without exposing chat
+-- history directly to browser clients.
+grant select, insert, update, delete on chat_sessions to service_role;
+grant select, insert, update, delete on chat_messages to service_role;
+grant select, insert, update, delete on user_memories to service_role;
+grant select, insert, update, delete on assistant_preferences to service_role;

@@ -89,14 +89,47 @@ Current limitations are intentionally visible in the UI:
 
 ## AI Assistant
 
-The AI Assistant uses Auto Mode by default. It detects whether a question is about synced GitHub data or a general software development topic.
+The AI Assistant uses Auto Mode by default. It detects whether a question should use app-provided context, synced GitHub data, or general software development help.
 
 - The assistant opens with a personalized greeting and suggested starter prompts while Auto Mode stays behind the scenes.
+- Authenticated chat sessions are saved in Supabase so the current conversation can be restored after refresh.
+- Simple date and time questions are answered from app-provided context using the configured backend timezone.
 - GitHub-related questions are answered from synced Supabase/GitHub data such as repositories, commits, weekly stats, and sync history.
 - General development questions use the local Ollama model for broader help, interview prep, README writing, project ideas, and explanations.
-- Answer source badges show whether a response came from GitHub data, general Ollama AI, or synced-data fallback.
+- Answer source badges show whether a response came from app context, GitHub data, general Ollama AI, saved memory, or synced-data fallback.
 
 Ollama is the current free local setup and does not require a paid Anthropic API key. General AI answers are not guaranteed to be grounded in the user's GitHub data unless Auto Mode detects that the question should use synced GitHub data.
+
+## AI Assistant Memory
+
+Authenticated users can enable assistant memory from Settings. Memory helps the assistant remember durable preferences, corrections, and project context across chats.
+
+Memory is stored in Supabase through backend-only API routes:
+
+- `chat_sessions` stores recent chat threads.
+- `chat_messages` stores user and assistant messages for session restore and short-term context.
+- `user_memories` stores active long-term memories such as preferences, corrections, project context, and learning goals.
+- `assistant_preferences` stores assistant settings such as whether memory is enabled.
+
+The assistant uses lightweight backend rules to save durable memories after a response. It avoids intentionally storing secrets, API keys, tokens, passwords, service role keys, OAuth secrets, and webhook URLs. This is a portfolio implementation and should still be reviewed before production use.
+
+Users can delete one saved memory, clear all saved memories, or turn memory off. Turning memory off stops new long-term memories from being written, while regular authenticated chat sessions can still be saved.
+
+## AI Assistant Behavior
+
+Auto Mode defaults to general help unless the user clearly asks about their synced GitHub data. This keeps normal questions like `what is GHL`, `explain OAuth 2.0`, or `can I air fry a hotdog?` from being over-routed into GitHub analytics.
+
+The assistant style is designed to be warm, calm, concise, practical, beginner-friendly, and honest when unsure. It acknowledges corrections, uses saved memories only when relevant, and avoids repeating memory back unless the user asks.
+
+Manual QA prompts for Auto Mode:
+
+- `what is GHL` should answer as a general AI/business automation question and explain GoHighLevel as the likely meaning.
+- `Remember that GHL means GoHighLevel in my AI automation context.` followed later by `what does GHL mean again?` should use saved memory.
+- `explain OAuth 2.0` should answer generally without requiring GitHub auth.
+- `2+2` should return `2 + 2 = 4.` from app calculation.
+- `what day is it today` should return the app/server date.
+- `which repository had the most commits?` should use GitHub Data mode when authenticated.
+- After logout, `which repository had the most commits?` should show the friendly Connect GitHub message.
 
 ## Theme Support
 
@@ -195,6 +228,7 @@ Expected `server/.env` variables:
 NODE_ENV=
 PORT=
 CLIENT_URL=
+APP_TIMEZONE=
 SESSION_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
@@ -314,12 +348,13 @@ http://127.0.0.1:11434
 4. Add this to `server/.env`:
 
 ```env
+APP_TIMEZONE=Asia/Manila
 AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=llama3.2
 ```
 
-The AI Assistant uses Auto Mode by default. GitHub-data questions call the local Ollama API with synced Supabase data and fall back to Supabase-based answers if the AI model is unavailable. General questions call Ollama directly for broad assistant responses.
+The AI Assistant uses Auto Mode by default. Simple date/time questions use app-provided backend context, GitHub-data questions call the local Ollama API with synced Supabase data and fall back to Supabase-based answers if the AI model is unavailable, and general questions call Ollama directly for broad assistant responses.
 
 ## API Endpoints
 
@@ -334,6 +369,15 @@ GET  /stats/weekly
 GET  /stats/top-repos
 GET  /stats/sync-history
 POST /chatbot/ask
+GET  /chatbot/sessions
+POST /chatbot/sessions
+GET  /chatbot/sessions/:id/messages
+DELETE /chatbot/sessions/:id
+GET  /chatbot/memories
+POST /chatbot/memories
+PATCH /chatbot/preferences
+DELETE /chatbot/memories/:id
+DELETE /chatbot/memories
 ```
 
 Example chatbot request body:
@@ -341,7 +385,9 @@ Example chatbot request body:
 ```json
 {
   "question": "Which repository had the most commits?",
-  "mode": "auto"
+  "mode": "auto",
+  "sessionId": "optional-chat-session-id",
+  "memoryEnabled": true
 }
 ```
 

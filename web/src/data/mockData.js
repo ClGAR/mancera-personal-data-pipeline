@@ -31,8 +31,8 @@ export const pageMeta = {
   },
   chatbot: {
     title: 'AI Assistant',
-    subtitle: 'Ask about your GitHub activity or get help with broader development questions.',
-    actionLabel: 'New Chat'
+    subtitle: 'Ask about your GitHub activity or get help with development questions.',
+    actionLabel: ''
   },
   integrations: {
     title: 'Integrations',
