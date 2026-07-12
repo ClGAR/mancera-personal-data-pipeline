@@ -520,6 +520,7 @@ function Chatbot({ auth, notify, chatResetNonce, onConnectGitHub }) {
                             className={feedback[message.id] === 'up' ? 'active-feedback' : ''}
                             type="button"
                             aria-label="Like response"
+                            aria-pressed={feedback[message.id] === 'up'}
                             onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'up' ? '' : 'up' }))}
                           >
                             <ThumbsUp size={16} aria-hidden="true" />
@@ -528,6 +529,7 @@ function Chatbot({ auth, notify, chatResetNonce, onConnectGitHub }) {
                             className={feedback[message.id] === 'down' ? 'active-feedback' : ''}
                             type="button"
                             aria-label="Dislike response"
+                            aria-pressed={feedback[message.id] === 'down'}
                             onClick={() => setFeedback((current) => ({ ...current, [message.id]: current[message.id] === 'down' ? '' : 'down' }))}
                           >
                             <ThumbsDown size={16} aria-hidden="true" />
@@ -551,14 +553,19 @@ function Chatbot({ auth, notify, chatResetNonce, onConnectGitHub }) {
               value={input}
               onChange={handleComposerChange}
               onKeyDown={handleComposerKeyDown}
-              placeholder="Ask anything about your GitHub data or development work..."
+              placeholder="Message your AI assistant"
               aria-label="Ask the AI assistant"
+              aria-describedby="assistant-composer-hint"
               rows={1}
             />
             <button className="primary-icon-button" type="submit" disabled={asking || !input.trim()} aria-label="Send question">
               <Send size={18} aria-hidden="true" />
             </button>
           </div>
+          <p className="composer-hint" id="assistant-composer-hint">
+            <span>Enter to send</span>
+            <span>Shift + Enter for a new line</span>
+          </p>
         </form>
       </article>
     </section>
@@ -639,7 +646,7 @@ function SessionRail({
 function SessionItem({ active, session, onDeleteSession, onSelectSession }) {
   return (
     <div className={`assistant-session-item ${active ? 'active' : ''}`.trim()}>
-      <button className="assistant-session-button" type="button" onClick={() => onSelectSession(session.id)}>
+      <button className="assistant-session-button" type="button" aria-current={active ? 'page' : undefined} onClick={() => onSelectSession(session.id)}>
         <MessageSquare size={16} aria-hidden="true" />
         <span>
           <strong>{session.title || 'New chat'}</strong>
